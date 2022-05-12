@@ -73,9 +73,10 @@ impl EventHandler for Handler {
         println!("found a new quote 🎉: {}", &msg.content.replace("\n", ""));
 
         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
-            "INSERT INTO quotes (content, author_id) VALUES ($1, $2)",
+            "INSERT INTO quotes (content, author_id, sent_at) VALUES ($1, $2, $3)",
             &msg.content,
             msg.author.id.0.to_string(),
+            msg.timestamp.naive_utc()
         )
         .execute(pool)
         .await;
@@ -132,10 +133,12 @@ impl EventHandler for Handler {
 
                         println!("found a new quote 🎉: {}", &message.content);
 
+                        // message.timestamp.with_timezone(chrono::Utc)
                         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
-                            "INSERT INTO quotes (content, author_id) VALUES ($1, $2)",
+                            "INSERT INTO quotes (content, author_id, sent_at) VALUES ($1, $2, $3)",
                             &message.content,
                             message.author.id.0.to_string(),
+                            message.timestamp.naive_utc()
                         )
                         .execute(pool)
                         .await;
