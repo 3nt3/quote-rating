@@ -1,5 +1,6 @@
-use std::{fs, process::exit};
+use std::{env, fs, process::exit};
 
+use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::Deserialize;
 use serenity::{
@@ -16,7 +17,7 @@ use serenity::{
     prelude::*,
     Client,
 };
-use toml::Value;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 // struct Handler;
 // impl EventHandler for Handler {
@@ -37,9 +38,54 @@ struct General;
 
 struct Handler;
 
+static POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
+
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, context: Context, data_about_bot: Ready) {
+    async fn message(&self, context: Context, msg: Message) {
+        let re = Regex::new(r"> (.*)").unwrap();
+        let mat = re.find(&msg.content);
+
+        let pool = POOL.get().unwrap();
+
+        if let None = mat {
+            return;
+        }
+        let query_res = sqlx::query!(
+            "SELECT id FROM quotes WHERE content = $1 AND author_id = $2",
+            &msg.content,
+            msg.author.id.0.to_string(),
+        )
+        .fetch_optional(pool)
+        .await;
+        match query_res {
+            Ok(foo) => {
+                if let Some(_) = foo {
+                    return;
+                }
+            }
+            Err(error) => {
+                eprintln!("error querying db: {}", error);
+                return;
+            }
+        }
+
+        println!("found a new quote 🎉: {}", &msg.content.replace("\n", ""));
+
+        let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
+            "INSERT INTO quotes (content, author_id) VALUES ($1, $2)",
+            &msg.content,
+            msg.author.id.0.to_string(),
+        )
+        .execute(pool)
+        .await;
+
+        if let Err(query_error) = insert_res {
+            eprintln!("error adding to db: {}", query_error);
+        }
+    }
+
+    async fn ready(&self, context: Context, _: Ready) {
         let config_result = get_config();
         if let None = config_result {
             eprintln!("error reading config.");
@@ -50,23 +96,60 @@ impl EventHandler for Handler {
         let re = Regex::new(r"> (.*)").unwrap();
 
         let mut messages = ChannelId(config.channel_id).messages_iter(&context).boxed();
-        let mut n: i64 = 0;
+        let mut n_quotes: i64 = 0;
+        let mut n_new_quotes: i64 = 0;
         let mut total: i64 = 0;
 
+        let pool = POOL.get().unwrap();
         while let Some(message_result) = messages.next().await {
             total += 1;
             match message_result {
                 Ok(message) => {
                     let mat = re.find(&message.content);
+
                     if let Some(_) = mat {
-                        n += 1;
+                        n_quotes += 1;
+                        let query_res = sqlx::query!(
+                            "SELECT id FROM quotes WHERE content = $1 AND author_id = $2",
+                            &message.content,
+                            message.author.id.0.to_string(),
+                        )
+                        .fetch_optional(pool)
+                        .await;
+                        match query_res {
+                            Ok(foo) => {
+                                if let Some(_) = foo {
+                                    continue;
+                                }
+                            }
+                            Err(error) => {
+                                eprintln!("error querying db: {}", error);
+                                continue;
+                            }
+                        }
+
+                        n_new_quotes += 1;
+
+                        println!("found a new quote 🎉: {}", &message.content);
+
+                        let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
+                            "INSERT INTO quotes (content, author_id) VALUES ($1, $2)",
+                            &message.content,
+                            message.author.id.0.to_string(),
+                        )
+                        .execute(pool)
+                        .await;
+
+                        if let Err(query_error) = insert_res {
+                            eprintln!("error adding to db: {}", query_error);
+                        }
                     }
                 }
                 Err(error) => eprintln!("error getting messages: {}", error),
             }
         }
 
-        println!("{n} quotes found in {total} messages");
+        println!("{n_new_quotes} new quotes ({n_quotes} total) found in {total} messages");
     }
 }
 
@@ -79,6 +162,9 @@ async fn main() {
         exit(1);
     }
     let config = maybe_config.unwrap();
+
+    let pool = connect_db().await;
+    POOL.set(pool).unwrap();
 
     // set up discord bot
     let framework = StandardFramework::new()
@@ -124,4 +210,14 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     msg.reply(ctx, "Pong!").await?;
 
     Ok(())
+}
+
+async fn connect_db() -> Pool<Postgres> {
+    dotenv::dotenv().ok();
+
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&env::var("DATABASE_URL").unwrap())
+        .await
+        .unwrap()
 }

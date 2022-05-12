@@ -1,0 +1,15 @@
+version: "3"
+services:
+  db:
+    image: "postgres"
+    volumes:
+      - mydbvolume:/var/lib/postgresql/data
+    ports:
+      - 5433:5432
+    environment:
+      - POSTGRES_DB=quotes
+      - POSTGRES_PASSWORD=kpI2Pq5TZZ4z5VadGul2H85gqs0fBdMj
+      - POSTGRES_USER=quotes
+
+volumes:
+  mydbvolume:
