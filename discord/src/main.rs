@@ -5,26 +5,14 @@ use regex::Regex;
 use serde::Deserialize;
 use serenity::{
     async_trait,
-    framework::{
-        standard::{
-            macros::{command, group},
-            CommandResult,
-        },
-        StandardFramework,
-    },
+    framework::{standard::macros::group, StandardFramework},
     futures::StreamExt,
     model::prelude::*,
     prelude::*,
     Client,
 };
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-
-// struct Handler;
-// impl EventHandler for Handler {
-//     fn message(&self, context: Context, msg: Message) {
-//         unimplemented!();
-//     }
-// }
+use warp::Filter;
 
 #[derive(Deserialize, Debug)]
 struct Config {
@@ -33,7 +21,6 @@ struct Config {
 }
 
 #[group]
-#[commands(ping)]
 struct General;
 
 struct Handler;
@@ -42,7 +29,13 @@ static POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn message(&self, context: Context, msg: Message) {
+    async fn message(&self, _: Context, msg: Message) {
+        println!(
+            "new message '{}' by {} in {}",
+            msg.content.replace("\n", " "),
+            msg.author.name,
+            msg.channel_id
+        );
         let re = Regex::new(r"> (.*)").unwrap();
         let mat = re.find(&msg.content);
 
@@ -120,6 +113,9 @@ impl EventHandler for Handler {
                         match query_res {
                             Ok(foo) => {
                                 if let Some(_) = foo {
+                                    // if there is a match for content and author,
+                                    // do not insert a duplicate and continue
+                                    // to the next message
                                     continue;
                                 }
                             }
@@ -206,13 +202,6 @@ fn get_config() -> Option<Config> {
             return None;
         }
     }
-}
-
-#[command]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.reply(ctx, "Pong!").await?;
-
-    Ok(())
 }
 
 async fn connect_db() -> Pool<Postgres> {
