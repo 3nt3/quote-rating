@@ -7,6 +7,7 @@ use rocket::{
     futures::TryFutureExt,
     serde::{json::Json, Serialize},
 };
+use rocket_cors::{AllowedHeaders, AllowedOrigins};
 use sqlx::{postgres::PgPoolOptions, query, Pool, Postgres};
 use std::env;
 
@@ -22,6 +23,7 @@ struct Quote {
     created_at: chrono::DateTime<Utc>,
     #[serde(with = "ts_milliseconds")]
     sent_at: chrono::DateTime<Utc>,
+    avatar_url: Option<String>,
     score: i64,
 }
 
@@ -35,6 +37,7 @@ async fn get_quote() -> Json<Quote> {
                 id: r.id,
                 content: r.content,
                 author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
+                avatar_url: r.avatar_url,
                 created_at: r.created_at,
                 sent_at: r.sent_at,
                 score: r.score.unwrap_or(0)
@@ -83,6 +86,7 @@ async fn vote(id: i32, vote: i32) -> Json<Quote> {
             content: r.content,
             author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
             created_at: r.created_at,
+            avatar_url: r.avatar_url,
             sent_at: r.sent_at,
             score: r.score.unwrap_or(0),
         })
@@ -93,8 +97,8 @@ async fn vote(id: i32, vote: i32) -> Json<Quote> {
     result
 }
 
-#[launch]
-async fn rocket() -> _ {
+#[rocket::main]
+async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
 
     let pool = PgPoolOptions::new()
@@ -104,5 +108,20 @@ async fn rocket() -> _ {
         .unwrap();
     POOL.set(pool).unwrap();
 
-    rocket::build().mount("/", routes![get_quote, vote])
+    let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:3000"]);
+    let cors = rocket_cors::CorsOptions {
+        allowed_origins,
+        allowed_headers: AllowedHeaders::some(&[]),
+        allow_credentials: false,
+        ..Default::default()
+    }
+    .to_cors()?;
+
+    let _ = rocket::build()
+        .mount("/", routes![get_quote, vote])
+        .attach(cors)
+        .launch()
+        .await?;
+
+    Ok(())
 }

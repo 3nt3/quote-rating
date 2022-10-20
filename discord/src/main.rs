@@ -68,10 +68,11 @@ impl EventHandler for Handler {
 
         // let chrono_timestamp = chrono::DateTime::from_utc(NaiveDateTime::from_timestamp(, nsecs));
         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
-            "INSERT INTO quotes (content, author_id, sent_at) VALUES ($1, $2, $3)",
+            "INSERT INTO quotes (content, author_id, sent_at, avatar_url) VALUES ($1, $2, $3, $4)",
             &msg.content,
             msg.author.id.0.to_string(),
-            *msg.timestamp
+            *msg.timestamp,
+            msg.author.avatar_url()
         )
         .execute(pool)
         .await;
@@ -133,11 +134,12 @@ impl EventHandler for Handler {
 
                         // message.timestamp.with_timezone(chrono::Utc)
                         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
-                            "INSERT INTO quotes (content, author_id, sent_at) VALUES ($1, $2, $3)",
+                            "INSERT INTO quotes (content, author_id, sent_at, avatar_url) VALUES ($1, $2, $3, $4)",
                             &message.content,
                             message.author.id.0.to_string(),
                             *message.timestamp, // the dereference converts serenity::Timestamp to
                                                 // chrono::DateTime
+                            message.author.avatar_url()
                         )
                         .execute(pool)
                         .await;

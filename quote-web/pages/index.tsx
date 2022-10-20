@@ -4,6 +4,7 @@ import Image from "next/image";
 import styles from "../styles/Home.module.css";
 
 import serverPic from "../public/serverPic.webp";
+import Link from "next/link";
 
 const Home: NextPage = () => {
   return (
@@ -42,15 +43,19 @@ const Home: NextPage = () => {
         </div>
 
         <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h2>Bewerten &rarr;</h2>
-            <p>So tindermäßig halt.</p>
-          </a>
+          <Link href="/rate">
+            <a className={styles.card}>
+              <h2>Bewerten &rarr;</h2>
+              <p>So tindermäßig halt.</p>
+            </a>
+          </Link>
 
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h2>Auswertung &rarr;</h2>
-            <p>Eher so excelmäßig</p>
-          </a>
+          <Link href="/stats">
+            <a className={styles.card}>
+              <h2>Auswertung &rarr;</h2>
+              <p>Eher so excelmäßig</p>
+            </a>
+          </Link>
         </div>
       </main>
     </div>

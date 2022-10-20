@@ -4,7 +4,8 @@ create table if not exists quotes
     content    text                      not null,
     author_id  text                      not null,
     created_at timestamptz default now() not null,
-    sent_at    timestamptz               not null
+    sent_at    timestamptz               not null,
+    avatar_url text
 );
 
 create table if not exists votes
