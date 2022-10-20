@@ -1,5 +1,6 @@
 use std::{env, fs, process::exit};
 
+use chrono::{NaiveDateTime, Utc};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::Deserialize;
@@ -12,7 +13,7 @@ use serenity::{
     Client,
 };
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use warp::Filter;
+// use warp::Filter;
 
 #[derive(Deserialize, Debug)]
 struct Config {
@@ -65,11 +66,12 @@ impl EventHandler for Handler {
 
         println!("found a new quote 🎉: {}", &msg.content.replace("\n", ""));
 
+        // let chrono_timestamp = chrono::DateTime::from_utc(NaiveDateTime::from_timestamp(, nsecs));
         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
             "INSERT INTO quotes (content, author_id, sent_at) VALUES ($1, $2, $3)",
             &msg.content,
             msg.author.id.0.to_string(),
-            msg.timestamp.naive_utc()
+            *msg.timestamp
         )
         .execute(pool)
         .await;
@@ -134,7 +136,8 @@ impl EventHandler for Handler {
                             "INSERT INTO quotes (content, author_id, sent_at) VALUES ($1, $2, $3)",
                             &message.content,
                             message.author.id.0.to_string(),
-                            message.timestamp.naive_utc()
+                            *message.timestamp, // the dereference converts serenity::Timestamp to
+                                                // chrono::DateTime
                         )
                         .execute(pool)
                         .await;

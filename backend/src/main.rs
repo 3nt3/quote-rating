@@ -35,8 +35,8 @@ async fn get_quote() -> Json<Quote> {
                 id: r.id,
                 content: r.content,
                 author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
-                created_at: chrono::DateTime::<Utc>::from_utc(r.created_at.unwrap(), Utc),
-                sent_at: chrono::DateTime::<Utc>::from_utc(r.sent_at.unwrap(), Utc),
+                created_at: r.created_at,
+                sent_at: r.sent_at,
                 score: r.score.unwrap_or(0)
             })
         })
@@ -82,8 +82,8 @@ async fn vote(id: i32, vote: i32) -> Json<Quote> {
             id: r.id,
             content: r.content,
             author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
-            created_at: chrono::DateTime::<Utc>::from_utc(r.created_at.unwrap(), Utc),
-            sent_at: chrono::DateTime::<Utc>::from_utc(r.sent_at.unwrap(), Utc),
+            created_at: r.created_at,
+            sent_at: r.sent_at,
             score: r.score.unwrap_or(0),
         })
     })
