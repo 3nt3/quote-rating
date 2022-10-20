@@ -3,6 +3,8 @@ import Head from "next/head";
 import Image from "next/image";
 import styles from "../styles/Home.module.css";
 
+import serverPic from "../public/serverPic.webp";
+
 const Home: NextPage = () => {
   return (
     <div className={styles.container}>
@@ -13,12 +15,31 @@ const Home: NextPage = () => {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>Quote Rating</h1>
+        <div className={styles.titleContainer}>
+          <div className={styles.title}>
+            <div className={styles.titleImg}>
+              <Image src={serverPic} alt="server icon" />
+            </div>
 
-        <p className={styles.description}>
-          Hier bewerten wir was gesprochen<sup>*</sup> wurde.
-        </p>
-        <p className="footNote">*Oder anderweitig kommuniziert</p>
+            <div className={styles.titleText}>
+              <p className={styles.titleUser}>
+                ??? <span className={styles.titleDate}>Yesterday at 10:38</span>
+              </p>
+              <p className={styles.titleQuote}>
+                <div className={styles.titleBlockQuoteThingy} />{" "}
+                <span className={styles.titleQuoteText}>
+                  Hier werden Zitate bewertet
+                </span>
+              </p>
+              <p>— Joa</p>
+            </div>
+            {/*<h1 className={styles.title}>Quote Rating</h1>
+          <p className={styles.description}>
+            Hier bewerten wir was gesprochen<sup>*</sup> wurde.
+          </p>
+          <p className="footNote">*Oder anderweitig kommuniziert</p> */}
+          </div>
+        </div>
 
         <div className={styles.grid}>
           <a href="https://nextjs.org/docs" className={styles.card}>
@@ -28,6 +49,7 @@ const Home: NextPage = () => {
 
           <a href="https://nextjs.org/learn" className={styles.card}>
             <h2>Auswertung &rarr;</h2>
+            <p>Eher so excelmäßig</p>
           </a>
         </div>
       </main>

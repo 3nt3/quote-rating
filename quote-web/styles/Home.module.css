@@ -12,49 +12,68 @@
   align-items: center;
 }
 
-.footer {
-  display: flex;
-  flex: 1;
-  padding: 2rem 0;
-  border-top: 1px solid #eaeaea;
-  justify-content: center;
-  align-items: center;
-}
-
-.footer a {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-grow: 1;
-}
-
-.title a {
-  color: #0070f3;
-  text-decoration: none;
-}
-
-.title a:hover,
-.title a:focus,
-.title a:active {
-  text-decoration: underline;
-}
-
 .title {
+  background-color: #36393f;
+  border-radius: 10px;
+
+  display: flex;
+  gap: 1rem;
+
+  padding: 2rem;
+
+  font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  max-width: 630px;
+  width: 100%;
+}
+
+.titleContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.title .titleImg {
+  width: 4rem;
+  height: 4rem;
+}
+
+.titleImg img {
+  border-radius: 100%;
+}
+
+.titleText {
+  font-size: 1.3rem;
+}
+
+.titleText p {
   margin: 0;
-  line-height: 1.15;
-  font-size: 4rem;
+  margin-bottom: 0.2rem;
 }
 
-.title,
-.description {
-  text-align: center;
+.titleText .titleQuote {
+  display: flex;
+  align-items: center;
 }
 
-.description {
-  margin-top: 4rem;
-  margin-bottom: 0;
-  line-height: 1.5;
-  font-size: 1.5rem;
+.titleText .titleUser {
+  color: rgb(230, 85, 137);
+}
+
+.titleUser .titleDate {
+  margin-left: 0.5rem;
+  font-size: 0.7em;
+  color: rgb(163, 166, 170);
+}
+
+.titleText .titleBlockQuoteThingy {
+  display: block;
+  width: 0.2em;
+  min-height: 1.3em;
+  margin-right: 1rem;
+  border-radius: 4px;
+
+  background-color: rgb(79, 84, 92);
 }
 
 .grid {
