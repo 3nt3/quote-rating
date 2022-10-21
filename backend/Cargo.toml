@@ -19,3 +19,20 @@ serde = "1.0.137"
 chrono = { version = "0.4.19", features = ["serde"] }
 rocket_cors = { git = "https://github.com/lawliet89/rocket_cors", branch = "master" }
 anyhow = "1.0.65"
+toml = "0.5.9"
+
+[dependencies.serenity]
+git = "https://github.com/serenity-rs/serenity"
+branch = "current"
+default-features = false
+features = [
+  "rustls_backend",
+  "builder",
+  "cache",
+  "chrono",
+  "client",
+  "gateway",
+  "model",
+  "http",
+  "utils"
+]
