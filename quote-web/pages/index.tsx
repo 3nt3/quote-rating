@@ -1,10 +1,10 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import Image from "next/image";
 import styles from "../styles/Home.module.css";
 
 import serverPic from "../public/serverPic.webp";
 import Link from "next/link";
+import Quote from "../components/quote";
 
 const Home: NextPage = () => {
   return (
@@ -16,32 +16,16 @@ const Home: NextPage = () => {
       </Head>
 
       <main className={styles.main}>
-        <div className={styles.titleContainer}>
-          <div className={styles.title}>
-            <div className={styles.titleImg}>
-              <Image src={serverPic} alt="server icon" />
-            </div>
-
-            <div className={styles.titleText}>
-              <p className={styles.titleUser}>
-                ??? <span className={styles.titleDate}>Yesterday at 10:38</span>
-              </p>
-              <p className={styles.titleQuote}>
-                <div className={styles.titleBlockQuoteThingy} />{" "}
-                <span className={styles.titleQuoteText}>
-                  Hier werden Zitate bewertet
-                </span>
-              </p>
-              <p>— Joa</p>
-            </div>
-            {/*<h1 className={styles.title}>Quote Rating</h1>
-          <p className={styles.description}>
-            Hier bewerten wir was gesprochen<sup>*</sup> wurde.
-          </p>
-          <p className="footNote">*Oder anderweitig kommuniziert</p> */}
-          </div>
-        </div>
-
+        <Quote
+          quote={{
+            avatar: serverPic,
+            id: -1,
+            author_id: -1,
+            content: "> Hier werden Zitate bewertet.\n— Joa",
+            sent_at: -1,
+            score: 0,
+          }}
+        />
         <div className={styles.grid}>
           <Link href="/rate">
             <a className={styles.card}>
@@ -49,7 +33,6 @@ const Home: NextPage = () => {
               <p>So tindermäßig halt.</p>
             </a>
           </Link>
-
           <Link href="/stats">
             <a className={styles.card}>
               <h2>Auswertung &rarr;</h2>

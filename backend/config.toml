@@ -1,0 +1,8 @@
+token = "ODM4NjY5MDgxMjE2Mjg2NzYz.GG2byn.e5ya_xILL32kLu72WYoV3a1BdnG3zNppNZHN8c"
+channel_id = 833977613491765258
+
+[db]
+username = "quotes"
+password = "kpI2Pq5TZZ4z5VadGul2H85gqs0fBdMj"
+host = "localhost"
+port = 5433

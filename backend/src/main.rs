@@ -69,10 +69,8 @@ async fn get_quote(client: &State<Client>) -> Json<Quote> {
 
 async fn get_username(client: &Client, user_id: u64) -> Option<String> {
     GuildId(816943824630710272)
-        .members(&client.cache_and_http.http, Some(1), UserId(user_id))
+        .member(&client.cache_and_http.http, UserId(user_id))
         .await
-        .unwrap()
-        .first()
         .unwrap()
         .nick
         .clone()

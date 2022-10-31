@@ -1,0 +1,63 @@
+.quote {
+  background-color: #36393f;
+  border-radius: 10px;
+
+  display: flex;
+  gap: 1rem;
+
+  padding: 2rem;
+
+  font-family: Whitney, "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  max-width: 630px;
+  width: 100%;
+
+  color: white;
+}
+
+.quoteContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.quote .quoteImg {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 4rem;
+  background-size: contain;
+}
+
+.quoteText {
+  font-size: 1.3rem;
+}
+
+.quoteText p {
+  margin: 0;
+  margin-bottom: 0.2rem;
+}
+
+.quoteQuote {
+  display: flex;
+  // align-items: center;
+}
+
+.quoteText .quoteUser {
+  color: rgb(230, 85, 137);
+}
+
+.quoteUser .quoteDate {
+  margin-left: 0.5rem;
+  font-size: 0.7em;
+  color: rgb(163, 166, 170);
+}
+
+.quoteText .quoteBlockQuoteThingy {
+  display: block;
+  width: 6px;
+  // min-height: 1.3em;
+  margin-right: 1rem;
+  border-radius: 4px;
+
+  background-color: rgb(79, 84, 92);
+}

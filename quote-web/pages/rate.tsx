@@ -1,14 +1,27 @@
 import type { NextPage } from "next";
 import Head from "next/head";
+import { useState } from "react";
+import Quote from "../components/quote";
 import styles from "../styles/Rate.module.css";
-import useSWR from "swr";
+
+type Props = {
+  quote: QuoteData;
+};
+
+type QuoteData = {
+  avatar_url?: string;
+  id: number;
+  content: string;
+  author_id: number;
+  sent_at: number;
+  score: number;
+};
 
 const fetcher = (input: RequestInfo | URL, init?: RequestInit) =>
   fetch(input, init).then((res) => res.json());
 
-const Rate: NextPage = () => {
-  const { data, error } = useSWR("http://localhost:8000/quote", fetcher);
-  console.log(data);
+const Rate = (props: Props) => {
+  const [quote, setQuote] = useState(props.quote);
 
   return (
     <div className={styles.container}>
@@ -18,9 +31,31 @@ const Rate: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className={styles.main}></main>
+      <main className={styles.main}>
+        <Quote quote={quote} />
+        <div>
+          <button
+            onClick={async () => {
+              setQuote(
+                await (await fetch("http://127.0.0.1:8000/quote")).json()
+              );
+            }}
+          >
+            New quote
+          </button>
+        </div>
+      </main>
     </div>
   );
 };
 
+export async function getServerSideProps(
+  context: any
+): Promise<{ props: Props }> {
+  return {
+    props: {
+      quote: await (await fetch("http://127.0.0.1:8000/quote")).json(),
+    }, // will be passed to the page component as props
+  };
+}
 export default Rate;
