@@ -2,20 +2,10 @@ import React from "react";
 import { NextFunctionComponent } from "next";
 import styles from "../styles/Quote.module.scss";
 import Image from "next/image";
+import { Quote as QuoteModel } from "../models/models";
 
 type Props = {
-  quote: Quote;
-};
-
-type Quote = {
-  avatar?: any;
-  avatar_url?: string;
-  id: number;
-  content: string;
-  username: string;
-  author_id: number;
-  sent_at: number;
-  score: number;
+  quote: QuoteModel;
 };
 
 export default function Quote(props: Props): NextFunctionComponent {

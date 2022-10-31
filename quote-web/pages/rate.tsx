@@ -1,27 +1,22 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Quote from "../components/quote";
-import styles from "../styles/Rate.module.css";
+import styles from "../styles/Rate.module.scss";
+import { ToastContainer, toast } from "react-toastify";
+import { Quote as QuoteModel } from "../models/models";
+import camelcaseKeysDeep from "camelcase-keys-deep";
+import { TailSpin } from "react-loading-icons";
 
 type Props = {
-  quote: QuoteData;
+  quote: QuoteModel | null;
+  error: string | null;
 };
-
-type QuoteData = {
-  avatar_url?: string;
-  id: number;
-  content: string;
-  author_id: number;
-  sent_at: number;
-  score: number;
-};
-
-const fetcher = (input: RequestInfo | URL, init?: RequestInit) =>
-  fetch(input, init).then((res) => res.json());
 
 const Rate = (props: Props) => {
-  const [quote, setQuote] = useState(props.quote);
+  const [quote, setQuote] = useState<QuoteModel | null>(props.quote);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(props.error);
 
   return (
     <div className={styles.container}>
@@ -32,18 +27,32 @@ const Rate = (props: Props) => {
       </Head>
 
       <main className={styles.main}>
-        <Quote quote={quote} />
-        <div>
-          <button
-            onClick={async () => {
-              setQuote(
-                await (await fetch("http://127.0.0.1:8000/quote")).json()
-              );
-            }}
-          >
-            New quote
-          </button>
-        </div>
+        {loading ? (
+          <TailSpin />
+        ) : quote ? (
+          <Fragment>
+            <Quote quote={quote} />
+            <div>
+              <button
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    setQuote(
+                      await (await fetch("http://127.0.0.1:8000/quote")).json()
+                    );
+                    setLoading(false);
+                  } catch (e) {
+                    toast(`Error ${e}`);
+                  }
+                }}
+              >
+                New quote
+              </button>
+            </div>{" "}
+          </Fragment>
+        ) : (
+          <div>Error loading quote :(</div>
+        )}
       </main>
     </div>
   );
@@ -52,9 +61,19 @@ const Rate = (props: Props) => {
 export async function getServerSideProps(
   context: any
 ): Promise<{ props: Props }> {
+  let error: string | null = null;
+  let quote: QuoteModel | null = null;
+  try {
+    quote = camelcaseKeysDeep(
+      await (await fetch("http://127.0.0.1:8000/quote")).json()
+    ) as QuoteModel;
+  } catch (e: any) {
+    error = e.toString();
+  }
   return {
     props: {
-      quote: await (await fetch("http://127.0.0.1:8000/quote")).json(),
+      quote,
+      error,
     }, // will be passed to the page component as props
   };
 }
