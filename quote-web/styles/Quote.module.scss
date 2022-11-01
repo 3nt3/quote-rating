@@ -38,7 +38,7 @@
 }
 
 .quoteQuote {
-  display: flex;
+  display: block;
   // align-items: center;
 }
 
@@ -52,7 +52,18 @@
   color: rgb(163, 166, 170);
 }
 
-.quoteText .quoteBlockQuoteThingy {
+.blockquote {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  p {
+    display: block;
+    margin: 0;
+    white-space: pre;
+  }
+}
+
+.blockQuoteThingy {
   display: block;
   width: 6px;
   // min-height: 1.3em;

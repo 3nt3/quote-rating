@@ -19,6 +19,7 @@ const Home: NextPage = () => {
         <Quote
           quote={{
             avatar: serverPic,
+            username: "asdfasfd",
             id: -1,
             author_id: -1,
             content: "> Hier werden Zitate bewertet.\n— Joa",

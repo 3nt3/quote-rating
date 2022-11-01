@@ -1,12 +1,13 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Quote from "../components/quote";
 import styles from "../styles/Rate.module.scss";
 import { ToastContainer, toast } from "react-toastify";
 import { Quote as QuoteModel } from "../models/models";
 import camelcaseKeysDeep from "camelcase-keys-deep";
 import { TailSpin } from "react-loading-icons";
+import "react-toastify/dist/ReactToastify.css";
 
 type Props = {
   quote: QuoteModel | null;
@@ -18,6 +19,10 @@ const Rate = (props: Props) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(props.error);
 
+  useEffect(() => {
+    toast(error, { type: "error" });
+  }, [error]);
+
   return (
     <div className={styles.container}>
       <Head>
@@ -27,6 +32,7 @@ const Rate = (props: Props) => {
       </Head>
 
       <main className={styles.main}>
+        <ToastContainer />
         {loading ? (
           <TailSpin />
         ) : quote ? (
@@ -36,13 +42,14 @@ const Rate = (props: Props) => {
               <button
                 onClick={async () => {
                   try {
+                    setError(null);
                     setLoading(true);
                     setQuote(
                       await (await fetch("http://127.0.0.1:8000/quote")).json()
                     );
                     setLoading(false);
-                  } catch (e) {
-                    toast(`Error ${e}`);
+                  } catch (e: any) {
+                    setError(e.toString());
                   }
                 }}
               >
@@ -64,9 +71,7 @@ export async function getServerSideProps(
   let error: string | null = null;
   let quote: QuoteModel | null = null;
   try {
-    quote = camelcaseKeysDeep(
-      await (await fetch("http://127.0.0.1:8000/quote")).json()
-    ) as QuoteModel;
+    quote = await (await fetch("http://127.0.0.1:8000/quote")).json();
   } catch (e: any) {
     error = e.toString();
   }
