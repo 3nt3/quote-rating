@@ -15,15 +15,25 @@
 		loading = true;
 		const res = await fetch('https://quotes.3nt3.de/api/quote');
 		quotes = await res.json();
-		setTimeout(() => {
-			loading = false;
-		}, 300);
+		loading = false;
 	}
 
 	async function vote(id: number) {
-		loading = true;
+		quotes = quotes.map((x: any) => {
+			if (x === undefined) return;
+			if (x.id == id) {
+				return { ...x, score: x.score + 1 };
+			} else {
+				return { ...x, score: x.score - 1 };
+			}
+		});
+
 		await fetch(`https://quotes.3nt3.de/api/vote/${id}/1`, { method: 'post' });
-		await getQuotes();
+
+		const otherOne = quotes.filter((x: any) => x && x.id != id)[0].id;
+		await fetch(`https://quotes.3nt3.de/api/vote/${otherOne}/-1`, { method: 'post' });
+
+		setTimeout(async () => await getQuotes(), 300);
 		// const otherQuote = quotes.filter((q) => q.id != id)[0].id;
 		// await fetch(`https://quotes.3nt3.de/api/vote/{otherQuote}/-1`);
 	}
@@ -53,11 +63,11 @@
 								Score: {quote.score}
 							</p></Content
 						>
-						<Actions
-							><IconButton class="material-icons" on:click={() => vote(quote.id)}
+						<Actions>
+							<IconButton class="material-icons" on:click={() => vote(quote.id)}
 								>favorite_border</IconButton
-							></Actions
-						>
+							>
+						</Actions>
 					</Card>
 				</div>
 			{/each}
