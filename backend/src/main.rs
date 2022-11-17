@@ -292,6 +292,7 @@ async fn main() -> anyhow::Result<()> {
 struct Stats {
     num_quotes: i64,
     num_votes: i64,
+    num_rated: i64,
 }
 
 #[get("/stats")]
@@ -310,10 +311,19 @@ async fn get_stats() -> String {
         .await
         .unwrap();
 
+    let num_rated = sqlx::query!(
+        "select count(1) from (select 1 from votes left join quotes q on votes.quote_id = q.id group by quote_id) as _"
+    )
+    .fetch_one(pool)
+    .map_ok(|r| r.count.unwrap())
+    .await
+    .unwrap();
+
     serde_prometheus::to_string(
         &Stats {
             num_quotes,
             num_votes,
+            num_rated,
         },
         None,
         HashMap::new(),
