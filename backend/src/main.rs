@@ -23,7 +23,7 @@ use serenity::{
 };
 
 use sqlx::{postgres::PgPoolOptions, query, Pool, Postgres};
-use std::fs;
+use std::{collections::HashMap, fs, hash::Hash};
 use std::{env, thread};
 
 static POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
@@ -149,7 +149,8 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
                  LEFT JOIN votes v on quotes.id = v.quote_id
         GROUP By quotes.id) AS x
         WHERE score is not null
-        ORDER BY score DESC"
+        ORDER BY score DESC
+        LIMIT 10"
     )
     .fetch_all(pool)
     .await
@@ -267,7 +268,8 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
     POOL.set(pool).unwrap();
 
-    let allowed_origins = AllowedOrigins::some_exact(&["http://localhost:3000"]);
+    let allowed_origins =
+        AllowedOrigins::some_exact(&["http://localhost:5173", "https://quotes.3nt3.de"]);
     let cors = rocket_cors::CorsOptions {
         allowed_origins,
         allowed_headers: AllowedHeaders::some(&[]),
@@ -278,12 +280,30 @@ async fn main() -> anyhow::Result<()> {
 
     let _ = rocket::build()
         .manage(client)
-        .mount("/", routes![get_quote, vote, get_leaderboard])
+        .mount("/", routes![get_quote, vote, get_leaderboard, get_stats])
         .attach(cors)
         .launch()
         .await?;
 
     Ok(())
+}
+
+#[derive(Serialize)]
+struct Stats {
+    num_quotes: i64,
+}
+
+#[get("/stats")]
+async fn get_stats() -> String {
+    let pool = POOL.get().unwrap();
+
+    let num_quotes = sqlx::query!("SELECT count(id) FROM QUOTES")
+        .fetch_one(pool)
+        .map_ok(|r| r.count.unwrap())
+        .await
+        .unwrap();
+
+    serde_prometheus::to_string(&Stats { num_quotes }, None, HashMap::new()).unwrap()
 }
 
 #[derive(Deserialize)]
