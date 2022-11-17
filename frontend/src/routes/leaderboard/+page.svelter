@@ -1,6 +1,6 @@
 <script async lang="ts">
 	async function getQuotes() {
-		const res = await fetch('https://quotes.3nt3.de/api/leaderboard');
+		const res = await fetch('http://localhost:8000/leaderboard');
 		return await res.json();
 	}
 </script>

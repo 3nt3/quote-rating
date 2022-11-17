@@ -13,7 +13,7 @@
 
 	async function getQuotes() {
 		loading = true;
-		const res = await fetch('https://quotes.3nt3.de/api/quote');
+		const res = await fetch('http://localhost:8000/quote');
 		quotes = await res.json();
 		setTimeout(() => {
 			loading = false;
@@ -22,10 +22,10 @@
 
 	async function vote(id: number) {
 		loading = true;
-		await fetch(`https://quotes.3nt3.de/api/vote/${id}/1`, { method: 'post' });
+		await fetch(`http://localhost:8000/vote/${id}/1`, { method: 'post' });
 		await getQuotes();
 		// const otherQuote = quotes.filter((q) => q.id != id)[0].id;
-		// await fetch(`https://quotes.3nt3.de/api/vote/{otherQuote}/-1`);
+		// await fetch(`http://localhost:8000/vote/{otherQuote}/-1`);
 	}
 </script>
 
