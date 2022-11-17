@@ -18,22 +18,18 @@
 		loading = false;
 	}
 
-	async function vote(id: number) {
+	async function vote(id: number, vote: -1 | 1) {
 		quotes = quotes.map((x: any) => {
-			if (x === undefined) return;
 			if (x.id == id) {
-				return { ...x, score: x.score + 1 };
+				return { ...x, score: x.score + vote };
 			} else {
-				return { ...x, score: x.score - 1 };
+				return x;
 			}
 		});
 
-		await fetch(`https://quotes.3nt3.de/api/vote/${id}/1`, { method: 'post' });
+		await fetch(`https://quotes.3nt3.de/api/vote/${id}/${vote}`, { method: 'post' });
 
-		const otherOne = quotes.filter((x: any) => x && x.id != id)[0].id;
-		await fetch(`https://quotes.3nt3.de/api/vote/${otherOne}/-1`, { method: 'post' });
-
-		setTimeout(async () => await getQuotes(), 300);
+		setTimeout(() => getQuotes(), 300);
 		// const otherQuote = quotes.filter((q) => q.id != id)[0].id;
 		// await fetch(`https://quotes.3nt3.de/api/vote/{otherQuote}/-1`);
 	}
@@ -64,8 +60,11 @@
 							</p></Content
 						>
 						<Actions>
-							<IconButton class="material-icons" on:click={() => vote(quote.id)}
+							<IconButton class="material-icons" on:click={() => vote(quote.id, 1)}
 								>favorite_border</IconButton
+							>
+							<IconButton class="material-icons" on:click={() => vote(quote.id, -1)}
+								>remove_circle_outline</IconButton
 							>
 						</Actions>
 					</Card>
