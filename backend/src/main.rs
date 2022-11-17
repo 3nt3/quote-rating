@@ -291,19 +291,34 @@ async fn main() -> anyhow::Result<()> {
 #[derive(Serialize)]
 struct Stats {
     num_quotes: i64,
+    num_votes: i64,
 }
 
 #[get("/stats")]
 async fn get_stats() -> String {
     let pool = POOL.get().unwrap();
 
-    let num_quotes = sqlx::query!("SELECT count(id) FROM QUOTES")
+    let num_quotes = sqlx::query!("SELECT count(id) FROM quotes")
         .fetch_one(pool)
         .map_ok(|r| r.count.unwrap())
         .await
         .unwrap();
 
-    serde_prometheus::to_string(&Stats { num_quotes }, None, HashMap::new()).unwrap()
+    let num_votes = sqlx::query!("SELECT count(1) FROM votes")
+        .fetch_one(pool)
+        .map_ok(|r| r.count.unwrap())
+        .await
+        .unwrap();
+
+    serde_prometheus::to_string(
+        &Stats {
+            num_quotes,
+            num_votes,
+        },
+        None,
+        HashMap::new(),
+    )
+    .unwrap()
 }
 
 #[derive(Deserialize)]
