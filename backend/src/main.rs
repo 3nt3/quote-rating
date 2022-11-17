@@ -44,26 +44,44 @@ struct Quote {
 }
 
 #[get("/quote")]
-async fn get_quote(client: &State<Client>) -> Json<Quote> {
+async fn get_quote(client: &State<Client>) -> Json<Vec<Quote>> {
     let pool = POOL.get().unwrap();
-    let result = sqlx::query!("SELECT quotes.*, SUM(v.vote) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 1")
-        .fetch_one(pool)
-        .map_ok(async move |r| {
-            Json(Quote {
-                id: r.id,
-                content: r.content,
-                author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
-                avatar_url: r.avatar_url,
-                username: get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()).await.unwrap(),
-                created_at: r.created_at,
-                sent_at: r.sent_at,
-                score: r.score.unwrap_or(0)
-            })
-        })
-        .await
-        .unwrap();
+    let quote_records = sqlx::query!("SELECT quotes.*, SUM(v.vote) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
+        .fetch_all(pool).await.unwrap();
 
-    result.await
+    // I kind of hate how this is structured
+    let (r1, r2) = (&quote_records[0], &quote_records[1]);
+    let (u1, u2) = (
+        get_username(&client, u64::from_str_radix(&r1.author_id, 10).unwrap())
+            .await
+            .unwrap_or((&"user not found").to_string()),
+        get_username(&client, u64::from_str_radix(&r2.author_id, 10).unwrap())
+            .await
+            .unwrap_or((&"user not found").to_string()),
+    );
+
+    let q1 = Quote {
+        id: r1.id,
+        content: r1.content.clone(),
+        author_id: u64::from_str_radix(&r1.author_id, 10).unwrap(),
+        avatar_url: r1.avatar_url.clone(),
+        username: u1,
+        created_at: r1.created_at,
+        sent_at: r1.sent_at,
+        score: r1.score.unwrap_or(0),
+    };
+    let q2 = Quote {
+        id: r2.id,
+        content: r2.content.clone(),
+        author_id: u64::from_str_radix(&r2.author_id, 10).unwrap(),
+        avatar_url: r2.avatar_url.clone(),
+        username: u2,
+        created_at: r2.created_at,
+        sent_at: r2.sent_at,
+        score: r2.score.unwrap_or(0),
+    };
+
+    Json(vec![q1, q2])
 }
 
 async fn get_username(client: &Client, user_id: u64) -> Option<String> {
@@ -96,6 +114,25 @@ async fn get_username(client: &Client, user_id: u64) -> Option<String> {
                 .execute(pool)
                 .await
                 .unwrap();
+            } else {
+                let maybe_username = UserId(user_id)
+                    .to_user(&client.cache_and_http)
+                    .await
+                    .map(|x| x.name)
+                    .ok();
+
+                if let Some(ref username) = maybe_username {
+                    sqlx::query!(
+                        "insert into username_cache (user_id, username) values ($1, $2)",
+                        user_id.to_string(),
+                        username
+                    )
+                    .execute(pool)
+                    .await
+                    .unwrap();
+                }
+
+                return maybe_username;
             }
 
             return maybe_nick;
@@ -106,13 +143,23 @@ async fn get_username(client: &Client, user_id: u64) -> Option<String> {
 #[get("/leaderboard")]
 async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
     let pool = POOL.get().unwrap();
-    let res = sqlx::query!("SELECT quotes.*, SUM(v.vote) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP By quotes.id ORDER BY SUM(v.vote) DESC LIMIT 10")
-        .fetch_all(pool).await.unwrap();
+    let res = sqlx::query!(
+        "SELECT * FROM (SELECT quotes.*, SUM(v.vote) AS score
+        FROM quotes
+                 LEFT JOIN votes v on quotes.id = v.quote_id
+        GROUP By quotes.id) AS x
+        WHERE score is not null
+        ORDER BY score DESC"
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap();
 
     let username_futures = res
         .iter()
         .map(|r| get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()));
 
+    // TODO: make this less slow
     let username_results = futures::future::join_all(username_futures).await;
     let items = res
         .iter()
