@@ -21,7 +21,6 @@ use serenity::{
     async_trait, client,
     model::prelude::{GuildId, UserId},
 };
-use tokio::runtime::Runtime;
 
 use sqlx::{postgres::PgPoolOptions, query, Pool, Postgres};
 use std::fs;
@@ -68,12 +67,72 @@ async fn get_quote(client: &State<Client>) -> Json<Quote> {
 }
 
 async fn get_username(client: &Client, user_id: u64) -> Option<String> {
-    GuildId(816943824630710272)
-        .member(&client.cache_and_http.http, UserId(user_id))
-        .await
-        .unwrap()
-        .nick
-        .clone()
+    let pool = POOL.get().unwrap();
+    let res = sqlx::query!(
+        "SELECT username from username_cache WHERE user_id = $1",
+        user_id.to_string()
+    )
+    .fetch_one(pool)
+    .await;
+
+    match res {
+        Ok(r) => {
+            return Some(r.username);
+        }
+        Err(_) => {
+            let maybe_nick = GuildId(816943824630710272)
+                .member(&client.cache_and_http.http, UserId(user_id))
+                .await
+                .map(|m| m.nick)
+                .ok()
+                .flatten();
+
+            if let Some(ref nick) = maybe_nick {
+                sqlx::query!(
+                    "insert into username_cache (user_id, username) values ($1, $2)",
+                    user_id.to_string(),
+                    nick
+                )
+                .execute(pool)
+                .await
+                .unwrap();
+            }
+
+            return maybe_nick;
+        }
+    }
+}
+
+#[get("/leaderboard")]
+async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
+    let pool = POOL.get().unwrap();
+    let res = sqlx::query!("SELECT quotes.*, SUM(v.vote) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP By quotes.id ORDER BY SUM(v.vote) DESC LIMIT 10")
+        .fetch_all(pool).await.unwrap();
+
+    let username_futures = res
+        .iter()
+        .map(|r| get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()));
+
+    let username_results = futures::future::join_all(username_futures).await;
+    let items = res
+        .iter()
+        .enumerate()
+        .map(move |(i, r)| Quote {
+            id: r.id,
+            content: r.content.clone(),
+            author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
+            avatar_url: r.avatar_url.clone(),
+            username: username_results[i]
+                .as_ref()
+                .unwrap_or(&"".to_string())
+                .to_string(),
+            created_at: r.created_at,
+            sent_at: r.sent_at,
+            score: r.score.unwrap_or(0),
+        })
+        .collect::<Vec<Quote>>();
+
+    Json(items)
 }
 
 #[post("/vote/<id>/<vote>")]
@@ -113,7 +172,7 @@ async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
             content: r.content,
             author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
             created_at: r.created_at,
-            username: get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()).await.unwrap(),
+            username: get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()).await.unwrap_or(r.author_id),
             avatar_url: r.avatar_url,
             sent_at: r.sent_at,
             score: r.score.unwrap_or(0),
@@ -172,7 +231,7 @@ async fn main() -> anyhow::Result<()> {
 
     let _ = rocket::build()
         .manage(client)
-        .mount("/", routes![get_quote, vote])
+        .mount("/", routes![get_quote, vote, get_leaderboard])
         .attach(cors)
         .launch()
         .await?;
