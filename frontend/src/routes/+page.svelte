@@ -17,6 +17,7 @@
 
 <h1 class="mdc-typography--headline3"><a href="/vote">Vote</a></h1>
 <h1 class="mdc-typography--headline3"><a href="/leaderboard">Leaderboard</a></h1>
+<p class="mdc-typography--body1">I'm sorry everything's ugly but I am way too lazy to fix it</p>
 
 <style>
 	a {

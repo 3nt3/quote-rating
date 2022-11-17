@@ -28,7 +28,11 @@
 <TopAppBar bind:this={topAppBar} variant="standard">
 	<Row>
 		<Section>
-			<Title>#krasse-zitate-von-menschen geile app dazu</Title>
+			<Title
+				><a href="/" class="mdc-typography--headline5 link"
+					>#krasse-zitate-von-menschen geile app dazu</a
+				></Title
+			>
 		</Section>
 		<Section align="end" toolbar>
 			<Button on:click={switchTheme}>
@@ -45,5 +49,14 @@
 
 <AutoAdjust {topAppBar} style="display: flex; justify-content: space-between;">
 	<div class="container"><slot /></div>
-	<div class="container" />
 </AutoAdjust>
+
+<style>
+	.link {
+		color: var(--mdc-theme-on-primary);
+	}
+
+	.container {
+		width: 100vw;
+	}
+</style>

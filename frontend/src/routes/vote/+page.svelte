@@ -5,17 +5,23 @@
 	import CircularProgressIndicator from '@smui/circular-progress';
 	import { onMount } from 'svelte';
 	let quotes: any = [];
+	let loading = true;
 
 	onMount(async () => {
 		await getQuotes();
 	});
 
 	async function getQuotes() {
+		loading = true;
 		const res = await fetch('http://localhost:8000/quote');
 		quotes = await res.json();
+		setTimeout(() => {
+			loading = false;
+		}, 300);
 	}
 
 	async function vote(id: number) {
+		loading = true;
 		await fetch(`http://localhost:8000/vote/${id}/1`, { method: 'post' });
 		await getQuotes();
 		// const otherQuote = quotes.filter((q) => q.id != id)[0].id;
@@ -24,35 +30,38 @@
 </script>
 
 <h1 class="mdc-typography--headline3">Vote</h1>
-<p class="mdc-typography--body1">Click on either of the quotes to vote for it</p>
 <div id="container">
 	<div id="quotes">
-		{#each quotes as quote}
-			<div class="quote">
-				<Card>
-					<Media class="card-media-16x9" aspectRatio="16x9">
-						<MediaContent
-							style={`background-image: url(${quote.avatar_url}); background-size: cover; background-position: center;`}
-						/>
-					</Media>
-					<Content class="quote">
-						<code class="code">{quote.content}</code>
-						<p
-							class={`mdc-typography--body1 ${
-								quote.score > 0 ? 'green' : quote.score < 0 ? 'red' : ''
-							}`}
+		{#if loading}
+			<CircularProgressIndicator style="width: 32px; height: 32px" class="spinner" indeterminate />
+		{:else}
+			{#each quotes as quote}
+				<div class="quote">
+					<Card>
+						<Media class="card-media-16x9" aspectRatio="16x9">
+							<MediaContent
+								style={`background-image: url(${quote.avatar_url}); background-size: cover; background-position: center;`}
+							/>
+						</Media>
+						<Content class="quote-content">
+							<code class="code">{quote.content}</code>
+							<p
+								class={`mdc-typography--body1 ${
+									quote.score > 0 ? 'green' : quote.score < 0 ? 'red' : ''
+								}`}
+							>
+								Score: {quote.score}
+							</p></Content
 						>
-							Score: {quote.score}
-						</p></Content
-					>
-					<Actions
-						><IconButton class="material-icons" on:click={() => vote(quote.id)}
-							>favorite_border</IconButton
-						></Actions
-					>
-				</Card>
-			</div>
-		{/each}
+						<Actions
+							><IconButton class="material-icons" on:click={() => vote(quote.id)}
+								>favorite_border</IconButton
+							></Actions
+						>
+					</Card>
+				</div>
+			{/each}
+		{/if}
 	</div>
 	<Button on:click={getQuotes}
 		><Icon class="material-icons">shuffle</Icon><Label>Skip</Label></Button
@@ -62,16 +71,19 @@
 <style lang="scss">
 	#container {
 		width: 100vw;
-		height: calc(100vh - 5rem);
 		display: flex;
 		justify-content: center;
 		align-items: center;
 		flex-direction: column;
+		gap: 2rem;
 	}
 	#quotes {
 		display: flex;
 		gap: 1rem;
-		align-items: stretch;
+		justify-content: center;
+		min-height: 300px;
+
+		transition: all 1s ease-in-out;
 
 		width: min(1000px, 90%);
 	}
@@ -83,13 +95,31 @@
 			white-space: pre;
 		}
 
-		width: 50% !important;
+		width: 50%;
 
 		.green {
 			color: #4caf50;
 		}
 		.red {
 			color: #f44336;
+		}
+	}
+
+	.spinner {
+		margin: auto;
+		alig-self: center;
+	}
+
+	@media screen and (max-width: 600px) {
+		#container {
+			width: min(1000px, 90%);
+			margin: 0 auto;
+		}
+		#quotes {
+			flex-direction: column;
+			.quote {
+				width: 100%;
+			}
 		}
 	}
 </style>
