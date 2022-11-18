@@ -150,7 +150,7 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
         GROUP By quotes.id) AS x
         WHERE score is not null
         ORDER BY score DESC
-        LIMIT 10"
+        LIMIT 100"
     )
     .fetch_all(pool)
     .await
