@@ -3,6 +3,7 @@
 extern crate rocket;
 
 use chrono::{serde::ts_milliseconds, Utc};
+use futures::{stream, Future, StreamExt};
 use once_cell::sync::OnceCell;
 use rocket::{
     futures::TryFutureExt,
@@ -41,10 +42,12 @@ struct Quote {
     created_at: chrono::DateTime<Utc>,
     #[serde(with = "ts_milliseconds")]
     sent_at: chrono::DateTime<Utc>,
-    avatar_url: Option<String>,
+    avatar_url: String,
     username: String,
     score: i64,
-    // message_link: String,
+    channel_id: u64,
+    message_id: u64,
+    message_link: String,
 }
 
 #[get("/quote")]
@@ -68,21 +71,39 @@ async fn get_quote(client: &State<Client>) -> Json<Vec<Quote>> {
         id: r1.id,
         content: r1.content.clone(),
         author_id: u64::from_str_radix(&r1.author_id, 10).unwrap(),
-        avatar_url: r1.avatar_url.clone(),
+        avatar_url: (r1.avatar_url.clone()),
         username: u1,
         created_at: r1.created_at,
         sent_at: r1.sent_at,
         score: r1.score.unwrap_or(0),
+        channel_id: u64::from_str_radix(&r1.channel_id, 10).unwrap(),
+        message_id: u64::from_str_radix(&r1.message_id, 10).unwrap(),
+        message_link: MessageId(u64::from_str_radix(&r1.message_id, 10).unwrap())
+            .link_ensured(
+                &client.cache_and_http,
+                ChannelId(u64::from_str_radix(&r1.channel_id, 10).unwrap()),
+                Some(GuildId(816943824630710272)),
+            )
+            .await,
     };
     let q2 = Quote {
         id: r2.id,
         content: r2.content.clone(),
         author_id: u64::from_str_radix(&r2.author_id, 10).unwrap(),
-        avatar_url: r2.avatar_url.clone(),
+        avatar_url: (r2.avatar_url.clone()),
         username: u2,
         created_at: r2.created_at,
         sent_at: r2.sent_at,
         score: r2.score.unwrap_or(0),
+        channel_id: u64::from_str_radix(&r2.channel_id, 10).unwrap(),
+        message_id: u64::from_str_radix(&r2.message_id, 10).unwrap(),
+        message_link: MessageId(u64::from_str_radix(&r2.message_id, 10).unwrap())
+            .link_ensured(
+                &client.cache_and_http,
+                ChannelId(u64::from_str_radix(&r2.channel_id, 10).unwrap()),
+                Some(GuildId(816943824630710272)),
+            )
+            .await,
     };
 
     Json(vec![q1, q2])
@@ -166,6 +187,19 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
 
     // TODO: make this less slow
     let username_results = futures::future::join_all(username_futures).await;
+
+    let message_links_futures = res.iter().map(|r| async {
+        let message_id = MessageId(u64::from_str_radix(&r.message_id, 10).unwrap());
+        let link = message_id.link_ensured(
+            &client.cache_and_http,
+            ChannelId(u64::from_str_radix(&r.channel_id, 10).unwrap()),
+            Some(GuildId(816943824630710272)),
+        );
+        return link.await.clone();
+    });
+
+    let message_links = futures::future::join_all(message_links_futures).await;
+
     let items = res
         .iter()
         .enumerate()
@@ -181,6 +215,11 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
             created_at: r.created_at,
             sent_at: r.sent_at,
             score: r.score.unwrap_or(0),
+            channel_id: u64::from_str_radix(&r.channel_id, 10).unwrap(),
+            message_id: u64::from_str_radix(&r.message_id, 10).unwrap(),
+            message_link: (&message_links.get(i).unwrap_or(&"".to_string()))
+                .to_string()
+                .to_string(),
         })
         .collect::<Vec<Quote>>();
 
@@ -228,6 +267,15 @@ async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
             avatar_url: r.avatar_url,
             sent_at: r.sent_at,
             score: r.score.unwrap_or(0),
+            channel_id: u64::from_str_radix(&r.channel_id, 10).unwrap(),
+            message_id: u64::from_str_radix(&r.message_id, 10).unwrap(),
+            message_link: MessageId(u64::from_str_radix(&r.message_id, 10).unwrap())
+                .link_ensured(
+                    &client.cache_and_http,
+                    ChannelId(u64::from_str_radix(&r.channel_id, 10).unwrap()),
+                    Some(GuildId(816943824630710272)),
+                )
+                .await,
         })
     })
     .await
