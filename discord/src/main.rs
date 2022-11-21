@@ -10,6 +10,7 @@ use serenity::{
     futures::StreamExt,
     model::prelude::*,
     prelude::*,
+    utils::content_safe,
     Client,
 };
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
@@ -30,7 +31,7 @@ static POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn message(&self, _: Context, msg: Message) {
+    async fn message(&self, ctx: Context, msg: Message) {
         println!(
             "new message '{}' by {} in {}",
             msg.content.replace("\n", " "),
@@ -68,11 +69,13 @@ impl EventHandler for Handler {
 
         // let chrono_timestamp = chrono::DateTime::from_utc(NaiveDateTime::from_timestamp(, nsecs));
         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
-            "INSERT INTO quotes (content, author_id, sent_at, avatar_url) VALUES ($1, $2, $3, $4)",
-            &msg.content,
+            "INSERT INTO quotes (content, author_id, sent_at, avatar_url, message_id, channel_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            remove_my_deadname(&msg.content),
             msg.author.id.0.to_string(),
             *msg.timestamp,
-            msg.author.avatar_url()
+            msg.author.avatar_url(),
+            msg.id.0.to_string(),
+            msg.channel(&ctx).await.unwrap().id().0.to_string()
         )
         .execute(pool)
         .await;
@@ -134,12 +137,14 @@ impl EventHandler for Handler {
 
                         // message.timestamp.with_timezone(chrono::Utc)
                         let insert_res: sqlx::Result<sqlx::postgres::PgQueryResult> = sqlx::query!(
-                            "INSERT INTO quotes (content, author_id, sent_at, avatar_url) VALUES ($1, $2, $3, $4)",
-                            &message.content,
+                            "INSERT INTO quotes (content, author_id, sent_at, avatar_url, message_id, channel_id) VALUES ($1, $2, $3, $4, $5, $6)",
+                            remove_my_deadname(&message.content),
                             message.author.id.0.to_string(),
                             *message.timestamp, // the dereference converts serenity::Timestamp to
                                                 // chrono::DateTime
-                            message.author.avatar_url()
+                            message.author.avatar_url(),
+                            message.id.0.to_string(),
+                            message.channel(&context).await.unwrap().id().0.to_string()
                         )
                         .execute(pool)
                         .await;
@@ -154,6 +159,23 @@ impl EventHandler for Handler {
         }
 
         println!("{n_new_quotes} new quotes ({n_quotes} total) found in {total} messages");
+    }
+}
+
+/// Removes all occurences of deadname and Deadname and replaces them with [Nia]
+fn remove_my_deadname(text: &str) -> String {
+    let deadname = env::var("DEADNAME").unwrap_or("".to_owned());
+
+    return text
+        .replace(&deadname, "[Nia]")
+        .replace(&some_kind_of_uppercase_first_letter(&deadname), "[Nia]");
+}
+
+fn some_kind_of_uppercase_first_letter(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
 }
 
