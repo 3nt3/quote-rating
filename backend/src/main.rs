@@ -329,9 +329,6 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("Error creating client");
 
-    let message_id: u64 = 1043988370499579914;
-    dbg!(find_channel(&client, message_id).await);
-
     // thread::spawn(|| {
     //     let mut rt = Runtime::new().unwrap();
     //     rt.block_on(async move {
