@@ -50,6 +50,7 @@
 							/>
 						</Media>
 						<Content class="quote-content">
+							<h2 class="username mdc-typography--headline5">{quote.username}</h2>
 							<code class="code">{quote.content}</code>
 							<p
 								class={`mdc-typography--body1 ${
@@ -57,7 +58,9 @@
 								}`}
 							>
 								Score: {quote.score}
-							</p></Content
+							</p>
+							<Button href={quote.message_link} target="_blank"><Label>View Message</Label></Button
+							></Content
 						>
 						<Actions>
 							<IconButton class="material-icons" on:click={() => vote(quote.id, 1)}
@@ -99,12 +102,19 @@
 	.quote {
 		flex: 1 !important;
 		code {
-			word-break: break-all;
+			display: block;
+			white-space: pre-wrap;
+			word-wrap: break-word;
 			hyphens: auto;
-			white-space: pre;
+			-webkit-hyphens: auto;
 		}
 
 		width: 50%;
+
+		.username {
+			margin-top: 0;
+			margin-bottom: 1rem;
+		}
 
 		.green {
 			color: #4caf50;
