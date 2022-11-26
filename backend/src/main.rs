@@ -343,6 +343,9 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
     POOL.set(pool).unwrap();
 
+    fucking_fix_everything().await;
+    return Ok(());
+
     let allowed_origins =
         AllowedOrigins::some_exact(&["http://localhost:5173", "https://quotes.3nt3.de"]);
     let cors = rocket_cors::CorsOptions {
@@ -361,6 +364,18 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     Ok(())
+}
+
+async fn fucking_fix_everything() {
+    let pool_old = POOL.get().unwrap();
+
+    let pool_new = PgPoolOptions::new()
+        .max_connections(1)
+        .connect("postgres://quotes:kpI2Pq5TZZ4z5VadGul2H85gqs0fBdMj@localhost:5435")
+        .await
+        .unwrap();
+
+    let all_old_votes = query!("select * from vote").fetch_all(pool_old).await;
 }
 
 #[derive(Serialize)]
