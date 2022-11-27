@@ -13,6 +13,7 @@ use rocket::{
 use rocket_cors::{AllowedHeaders, AllowedOrigins};
 use serde::Deserialize;
 
+use futures::future;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
@@ -226,6 +227,48 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
     Json(items)
 }
 
+#[derive(Debug, Serialize)]
+struct PersonWithNumber {
+    username: Option<String>,
+    user_id: String,
+    score: Option<i64>,
+}
+
+#[get("/funniest-people")]
+async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> {
+    let pool = POOL.get().unwrap();
+
+    let res = sqlx::query!("select * from (SELECT x.author_id, x.score -- this combines author_id and score
+            FROM (SELECT quotes.*, SUM(v.vote) AS score -- this calculates score from single votes
+                  FROM quotes
+                           LEFT JOIN votes v on quotes.id = v.quote_id
+                  GROUP By quotes.id) AS x
+            WHERE score is not null
+            group by x.author_id, x.score
+            ORDER BY score DESC) as z left join username_cache on username_cache.user_id = z.author_id -- this uses username_cache").fetch_all(pool).await.unwrap();
+
+    let username_futures = res.iter().map(|r| {
+        get_username(
+            &client,
+            u64::from_str_radix(&r.user_id.as_ref().unwrap_or(&"0".to_string()), 10).unwrap(),
+        )
+    });
+    let usernames = futures::future::join_all(username_futures).await;
+
+    Json(
+        res.iter()
+            .enumerate()
+            .map(move |(i, r)| PersonWithNumber {
+                username: usernames[i].as_ref().cloned(),
+                user_id: (&r.user_id.as_ref())
+                    .unwrap_or(&"user id not found".to_string())
+                    .to_string(),
+                score: r.score,
+            })
+            .collect(),
+    )
+}
+
 #[post("/vote/<id>/<vote>")]
 async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
     let pool = POOL.get().unwrap();
@@ -343,9 +386,6 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
     POOL.set(pool).unwrap();
 
-    fucking_fix_everything().await;
-    return Ok(());
-
     let allowed_origins =
         AllowedOrigins::some_exact(&["http://localhost:5173", "https://quotes.3nt3.de"]);
     let cors = rocket_cors::CorsOptions {
@@ -358,24 +398,15 @@ async fn main() -> anyhow::Result<()> {
 
     let _ = rocket::build()
         .manage(client)
-        .mount("/", routes![get_quote, vote, get_leaderboard, get_stats])
+        .mount(
+            "/",
+            routes![get_quote, vote, get_leaderboard, get_stats, funniest_people],
+        )
         .attach(cors)
         .launch()
         .await?;
 
     Ok(())
-}
-
-async fn fucking_fix_everything() {
-    let pool_old = POOL.get().unwrap();
-
-    let pool_new = PgPoolOptions::new()
-        .max_connections(1)
-        .connect("postgres://quotes:kpI2Pq5TZZ4z5VadGul2H85gqs0fBdMj@localhost:5435")
-        .await
-        .unwrap();
-
-    let all_old_votes = query!("select * from vote").fetch_all(pool_old).await;
 }
 
 #[derive(Serialize)]
