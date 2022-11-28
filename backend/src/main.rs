@@ -27,6 +27,7 @@ use serenity::{
 };
 use serenity::{http::Http, model::prelude::ChannelId};
 
+use bigdecimal::ToPrimitive;
 use sqlx::{postgres::PgPoolOptions, query, Pool, Postgres};
 use std::{collections::HashMap, fs, hash::Hash};
 use std::{env, thread};
@@ -231,28 +232,18 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
 struct PersonWithNumber {
     username: Option<String>,
     user_id: String,
-    score: Option<i64>,
+    score: Option<f64>,
 }
 
 #[get("/funniest-people")]
 async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> {
     let pool = POOL.get().unwrap();
 
-    let res = sqlx::query!("select * from (SELECT x.author_id, x.score -- this combines author_id and score
-            FROM (SELECT quotes.*, SUM(v.vote) AS score -- this calculates score from single votes
-                  FROM quotes
-                           LEFT JOIN votes v on quotes.id = v.quote_id
-                  GROUP By quotes.id) AS x
-            WHERE score is not null
-            group by x.author_id, x.score
-            ORDER BY score DESC) as z left join username_cache on username_cache.user_id = z.author_id -- this uses username_cache").fetch_all(pool).await.unwrap();
+    let res = sqlx::query!("select q.author_id, avg(x.score) as avg_score from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by avg_score desc;").fetch_all(pool).await.unwrap();
 
-    let username_futures = res.iter().map(|r| {
-        get_username(
-            &client,
-            u64::from_str_radix(&r.user_id.as_ref().unwrap_or(&"0".to_string()), 10).unwrap(),
-        )
-    });
+    let username_futures = res
+        .iter()
+        .map(|r| get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()));
     let usernames = futures::future::join_all(username_futures).await;
 
     Json(
@@ -260,10 +251,8 @@ async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> 
             .enumerate()
             .map(move |(i, r)| PersonWithNumber {
                 username: usernames[i].as_ref().cloned(),
-                user_id: (&r.user_id.as_ref())
-                    .unwrap_or(&"user id not found".to_string())
-                    .to_string(),
-                score: r.score,
+                user_id: (&r.author_id).to_string(),
+                score: r.avg_score.as_ref().map(|x| x.to_f64().unwrap_or(0.0)),
             })
             .collect(),
     )
