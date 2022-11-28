@@ -13,6 +13,7 @@ use rocket::{
 use rocket_cors::{AllowedHeaders, AllowedOrigins};
 use serde::Deserialize;
 
+use futures::future;
 use serenity::model::event::ResumedEvent;
 use serenity::model::gateway::Ready;
 use serenity::prelude::*;
@@ -26,6 +27,7 @@ use serenity::{
 };
 use serenity::{http::Http, model::prelude::ChannelId};
 
+use bigdecimal::ToPrimitive;
 use sqlx::{postgres::PgPoolOptions, query, Pool, Postgres};
 use std::{collections::HashMap, fs, hash::Hash};
 use std::{env, thread};
@@ -226,6 +228,36 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
     Json(items)
 }
 
+#[derive(Debug, Serialize)]
+struct PersonWithNumber {
+    username: Option<String>,
+    user_id: String,
+    score: Option<f64>,
+}
+
+#[get("/funniest-people")]
+async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> {
+    let pool = POOL.get().unwrap();
+
+    let res = sqlx::query!("select q.author_id, avg(x.score) as avg_score from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by avg_score desc;").fetch_all(pool).await.unwrap();
+
+    let username_futures = res
+        .iter()
+        .map(|r| get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()));
+    let usernames = futures::future::join_all(username_futures).await;
+
+    Json(
+        res.iter()
+            .enumerate()
+            .map(move |(i, r)| PersonWithNumber {
+                username: usernames[i].as_ref().cloned(),
+                user_id: (&r.author_id).to_string(),
+                score: r.avg_score.as_ref().map(|x| x.to_f64().unwrap_or(0.0)),
+            })
+            .collect(),
+    )
+}
+
 #[post("/vote/<id>/<vote>")]
 async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
     let pool = POOL.get().unwrap();
@@ -355,7 +387,10 @@ async fn main() -> anyhow::Result<()> {
 
     let _ = rocket::build()
         .manage(client)
-        .mount("/", routes![get_quote, vote, get_leaderboard, get_stats])
+        .mount(
+            "/",
+            routes![get_quote, vote, get_leaderboard, get_stats, funniest_people],
+        )
         .attach(cors)
         .launch()
         .await?;

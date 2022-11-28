@@ -1,0 +1,5 @@
+[release]
+address = "0.0.0.0"
+port = 8087
+workers = 4
+
