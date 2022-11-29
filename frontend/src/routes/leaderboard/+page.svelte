@@ -8,8 +8,15 @@
 		quotes = await res.json();
 	}
 
+	let funniestPeople: any[] = [];
+	async function getFunniestPeople() {
+		const res = await fetch('https://quotes.3nt3.de/api/funniest-people');
+		funniestPeople = await res.json();
+	}
+
 	onMount(() => {
 		getQuotes();
+		getFunniestPeople();
 	});
 
 	async function vote(id: number, vote: -1 | 1) {
@@ -30,6 +37,24 @@
 </script>
 
 <h1 class="mdc-typography--headline3">Leaderboard</h1>
+
+<h2 class="mdc-typography--headline4">Funniest people</h2>
+{#if funniestPeople.length > 0}
+	<ol>
+		{#each funniestPeople as person}
+			<li>
+				<div>
+					<p>{person.username}</p>
+					<p>Total Score: {person.score}</p>
+					<p>#votes: {person.n_votes}</p>
+				</div>
+			</li>
+		{/each}
+	</ol>{:else}
+	<CircularProgress style="width: 32px; height: 32px" indeterminate />
+{/if}
+
+<h2 class="mdc-typography--headline4">Top 100 quotes</h2>
 <p class="mdc-typography--body1">Please only vote once so the data isn't skewed</p>
 <ol>
 	{#if quotes.length > 0}
