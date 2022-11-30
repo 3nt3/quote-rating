@@ -1,6 +1,30 @@
 <script async lang="ts">
 	import IconButton from '@smui/icon-button';
 	import CircularProgress from '@smui/circular-progress';
+	import { Bar } from 'svelte-chartjs';
+
+	import {
+		Chart as ChartJS,
+		Title,
+		Tooltip,
+		Legend,
+		LinearScale,
+		PointElement,
+		CategoryScale,
+		BarElement,
+		Colors
+	} from 'chart.js';
+	ChartJS.register(
+		Title,
+		Tooltip,
+		Legend,
+		LinearScale,
+		CategoryScale,
+		PointElement,
+		BarElement,
+		Colors
+	);
+
 	import { onMount } from 'svelte';
 	let quotes: any[] = [];
 	async function getQuotes() {
@@ -9,9 +33,16 @@
 	}
 
 	let funniestPeople: any[] = [];
+	let chartData: any = { labels: ['1', '2', '3'], datasets: [{ label: 'asdf', data: [1, 2, 3] }] };
 	async function getFunniestPeople() {
 		const res = await fetch('https://quotes.3nt3.de/api/funniest-people');
-		funniestPeople = await res.json();
+		funniestPeople = (await res.json()).filter((x: any) => x.username !== null);
+		chartData = {
+			labels: funniestPeople.map((x) => x.username),
+			datasets: [
+				{ data: funniestPeople.map((x) => x.score), label: "Total score of user's quotes" }
+			]
+		};
 	}
 
 	onMount(() => {
@@ -40,17 +71,10 @@
 
 <h2 class="mdc-typography--headline4">Funniest people</h2>
 {#if funniestPeople.length > 0}
-	<ol>
-		{#each funniestPeople as person}
-			<li>
-				<div>
-					<p>{person.username}</p>
-					<p>Total Score: {person.score}</p>
-					<p>#votes: {person.n_votes}</p>
-				</div>
-			</li>
-		{/each}
-	</ol>{:else}
+	<div id="chart">
+		<Bar id="chart" data={chartData} options={{ responsive: true }} />
+	</div>
+{:else}
 	<CircularProgress style="width: 32px; height: 32px" indeterminate />
 {/if}
 
@@ -84,5 +108,17 @@
 <style>
 	#actions {
 		display: flex;
+	}
+
+	#chart {
+		height: 25rem;
+	}
+
+	pre {
+		display: block;
+		white-space: pre-wrap;
+		word-wrap: break-word;
+		hyphens: auto;
+		-webkit-hyphens: auto;
 	}
 </style>
