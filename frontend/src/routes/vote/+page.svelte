@@ -126,7 +126,7 @@
 
 	.spinner {
 		margin: auto;
-		alig-self: center;
+		align-self: center;
 	}
 
 	@media screen and (max-width: 600px) {
