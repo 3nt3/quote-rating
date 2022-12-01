@@ -3,7 +3,6 @@
 extern crate rocket;
 
 use chrono::{serde::ts_milliseconds, Utc};
-use futures::{stream, Future, StreamExt};
 use once_cell::sync::OnceCell;
 use rocket::{
     futures::TryFutureExt,
@@ -12,25 +11,16 @@ use rocket::{
 };
 use rocket_cors::{AllowedHeaders, AllowedOrigins};
 use serde::Deserialize;
+use serenity::model::prelude::MessageId;
 
-use futures::future;
-use serenity::model::event::ResumedEvent;
-use serenity::model::gateway::Ready;
+use serenity::model::prelude::ChannelId;
+use serenity::model::prelude::{GuildId, UserId};
 use serenity::prelude::*;
-use serenity::{
-    async_trait, client,
-    model::prelude::{GuildId, UserId},
-};
-use serenity::{
-    client::bridge::gateway::ShardManager,
-    model::prelude::{Message, MessageId},
-};
-use serenity::{http::Http, model::prelude::ChannelId};
 
 use bigdecimal::ToPrimitive;
-use sqlx::{postgres::PgPoolOptions, query, Pool, Postgres};
-use std::{collections::HashMap, fs, hash::Hash};
-use std::{env, thread};
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use std::env;
+use std::{collections::HashMap, fs};
 
 static POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
 
@@ -327,27 +317,27 @@ async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
 }
 
 /// Tries to figure out a channel for a message id
-async fn find_channel(client: &Client, message_id: u64) -> Result<u64, serenity::Error> {
-    let channels = client
-        .cache_and_http
-        .http
-        .get_channels(816943824630710272)
-        .await?;
-
-    let channel_id: Option<u64> = None;
-    for channel in channels {
-        let maybe_msg = client
-            .cache_and_http
-            .http
-            .get_message(channel.id.0, message_id)
-            .await;
-        if let Ok(_) = maybe_msg {
-            return Ok(channel.id.0);
-        }
-    }
-
-    Err(serenity::Error::Other("not found"))
-}
+// async fn find_channel(client: &Client, message_id: u64) -> Result<u64, serenity::Error> {
+//     let channels = client
+//         .cache_and_http
+//         .http
+//         .get_channels(816943824630710272)
+//         .await?;
+//
+//     let channel_id: Option<u64> = None;
+//     for channel in channels {
+//         let maybe_msg = client
+//             .cache_and_http
+//             .http
+//             .get_message(channel.id.0, message_id)
+//             .await;
+//         if let Ok(_) = maybe_msg {
+//             return Ok(channel.id.0);
+//         }
+//     }
+//
+//     Err(serenity::Error::Other("not found"))
+// }
 
 #[rocket::main]
 async fn main() -> anyhow::Result<()> {
@@ -367,7 +357,7 @@ async fn main() -> anyhow::Result<()> {
         | GatewayIntents::GUILDS
         | GatewayIntents::GUILD_MESSAGES;
 
-    let mut client = Client::builder(config.token, intents)
+    let client = Client::builder(config.token, intents)
         .await
         .expect("Error creating client");
 
