@@ -234,18 +234,25 @@ struct PersonWithNumber {
     user_id: String,
     score: Option<f64>,
     n_votes: Option<i64>,
+    n_quotes: Option<i64>,
 }
 
 #[get("/funniest-people")]
 async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> {
     let pool = POOL.get().unwrap();
 
-    let res = sqlx::query!("select q.author_id, sum(x.score) as sum_score, count(x.score) as n from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by sum_score desc;").fetch_all(pool).await.unwrap();
+    let res = sqlx::query!("select q.author_id, sum(x.score) as sum_score, count(x.score) as n_votes from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by sum_score desc;").fetch_all(pool).await.unwrap();
 
     let username_futures = res
         .iter()
         .map(|r| get_username(&client, u64::from_str_radix(&r.author_id, 10).unwrap()));
     let usernames = futures::future::join_all(username_futures).await;
+
+    let n_quotes_vec = sqlx::query!("select quotes.author_id, count(*) as n_quotes from quotes group by quotes.author_id order by n_quotes desc").fetch_all(pool).await.unwrap();
+    let n_quotes: HashMap<String, i64> = n_quotes_vec
+        .iter()
+        .map(|x| (x.author_id.clone(), x.n_quotes.unwrap_or(0)))
+        .collect();
 
     Json(
         res.iter()
@@ -254,7 +261,8 @@ async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> 
                 username: usernames[i].as_ref().cloned(),
                 user_id: (&r.author_id).to_string(),
                 score: r.sum_score.as_ref().map(|x| x.to_f64().unwrap_or(0.0)),
-                n_votes: r.n,
+                n_votes: r.n_votes,
+                n_quotes: n_quotes.get(&r.author_id).copied(),
             })
             .collect(),
     )
