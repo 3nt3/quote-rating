@@ -40,6 +40,7 @@
 		chartData = {
 			labels: funniestPeople.map((x) => x.username),
 			datasets: [
+				{ data: funniestPeople.map((x) => x.n_quotes), label: "Number of user's quotes" },
 				{ data: funniestPeople.map((x) => x.score), label: "Total score of user's quotes" }
 			]
 		};
