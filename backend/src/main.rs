@@ -405,8 +405,14 @@ struct Stats {
     num_rated: i64,
 }
 
-#[get("/stats")]
-async fn get_stats() -> String {
+#[derive(Debug, PartialEq, FromFormField)]
+enum Format {
+    Prometheus,
+    Json,
+}
+
+#[get("/stats?<format>")]
+async fn get_stats(format: Option<Format>) -> String {
     let pool = POOL.get().unwrap();
 
     let num_quotes = sqlx::query!("SELECT count(id) FROM quotes")
@@ -429,16 +435,30 @@ async fn get_stats() -> String {
     .await
     .unwrap();
 
-    serde_prometheus::to_string(
-        &Stats {
-            num_quotes,
-            num_votes,
-            num_rated,
-        },
-        None,
-        HashMap::new(),
-    )
-    .unwrap()
+    dbg!(&format);
+
+    match format.unwrap_or(Format::Prometheus) {
+        Format::Prometheus => {
+            return serde_prometheus::to_string(
+                &Stats {
+                    num_quotes,
+                    num_votes,
+                    num_rated,
+                },
+                None,
+                HashMap::new(),
+            )
+            .unwrap();
+        }
+        Format::Json => {
+            return serde_json::to_string(&Stats {
+                num_quotes,
+                num_votes,
+                num_rated,
+            })
+            .unwrap();
+        }
+    }
 }
 
 #[derive(Deserialize)]
