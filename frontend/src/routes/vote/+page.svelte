@@ -29,7 +29,7 @@
 
 	async function getQuotes() {
 		loading = true;
-		const res = await fetch('https://quotes.3nt3.de/api/quote');
+    const res = await fetch(`https://quotes.3nt3.de/api/quote?prefer_unrated=${preferUnrated}`);
 		quotes = await res.json();
 		loading = false;
 	}
