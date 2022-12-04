@@ -34,6 +34,8 @@
 
 	let funniestPeople: any[] = [];
 	let chartData: any = { labels: ['1', '2', '3'], datasets: [{ label: 'asdf', data: [1, 2, 3] }] };
+	let averageChartData: any = {};
+
 	async function getFunniestPeople() {
 		const res = await fetch('https://quotes.3nt3.de/api/funniest-people');
 		funniestPeople = (await res.json()).filter((x: any) => x.username !== null);
@@ -41,7 +43,15 @@
 			labels: funniestPeople.map((x) => x.username),
 			datasets: [
 				{ data: funniestPeople.map((x) => x.n_quotes), label: "Number of user's quotes" },
-				{ data: funniestPeople.map((x) => x.score), label: "Total score of user's quotes" }
+				{ data: funniestPeople.map((x) => x.sum_score), label: "Total score of user's quotes" }
+			]
+		};
+
+		const sortedByAverageScore = funniestPeople.sort((a, b) => b.avg_score - a.avg_score);
+		averageChartData = {
+			labels: sortedByAverageScore.map((x) => x.username),
+			datasets: [
+				{ data: sortedByAverageScore.map((x) => x.avg_score), label: "Average score user's quotes" }
 			]
 		};
 	}
@@ -72,9 +82,14 @@
 
 <h2 class="mdc-typography--headline4">Funniest people</h2>
 {#if funniestPeople.length > 0}
-	<div id="chart">
+	<div class="chart">
 		<Bar id="chart" data={chartData} options={{ responsive: true }} />
 	</div>
+	{#if averageChartData.datasets[0].data.length > 0}
+		<div class="chart">
+			<Bar data={averageChartData} options={{ responsive: true }} />
+		</div>
+	{/if}
 {:else}
 	<CircularProgress style="width: 32px; height: 32px" indeterminate />
 {/if}
@@ -111,7 +126,7 @@
 		display: flex;
 	}
 
-	#chart {
+	.chart {
 		height: 25rem;
 	}
 
