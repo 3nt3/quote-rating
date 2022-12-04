@@ -42,11 +42,35 @@ struct Quote {
     message_link: String,
 }
 
-#[get("/quote")]
-async fn get_quote(client: &State<Client>) -> Json<Vec<Quote>> {
+#[get("/quote?<prefer_unrated>")]
+async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec<Quote>> {
     let pool = POOL.get().unwrap();
-    let quote_records = sqlx::query!("SELECT quotes.*, SUM(v.vote) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
+
+    struct QuoteButNotReally {
+        id: i32,
+        content: String,
+        author_id: String,
+        sent_at: chrono::DateTime<Utc>,
+        avatar_url: String,
+        message_id: String,
+        channel_id: String,
+        created_at: chrono::DateTime<Utc>,
+        score: Option<i64>, // there is literally no way this would ever be None sqlx is just dumb
+    }
+
+    let quote_records;
+    if prefer_unrated {
+        quote_records = sqlx::query_as!(QuoteButNotReally, r#"select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
+                                        from quotes
+                                                 left join votes v on quotes.id = v.quote_id
+                                        group by quotes.id
+                                        order by (select count(1) from votes where votes.quote_id = id) asc
+                                        limit 2
+                                        "#).fetch_all(pool).await.unwrap();
+    } else {
+        quote_records = sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
         .fetch_all(pool).await.unwrap();
+    }
 
     // I kind of hate how this is structured
     let (r1, r2) = (&quote_records[0], &quote_records[1]);

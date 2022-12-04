@@ -6,10 +6,26 @@
 	import { onMount } from 'svelte';
 	let quotes: any = [];
 	let loading = true;
+	let statsLoading = true;
+
+	let preferUnrated = true;
+
+	let stats: any = {};
+	let percentRated: string | null = null;
 
 	onMount(async () => {
 		await getQuotes();
+		await getStats();
 	});
+
+	async function getStats() {
+		statsLoading = true;
+		const res = await fetch('https://quotes.3nt3.de/api/stats?format=json');
+		stats = await res.json();
+
+		percentRated = ((stats.num_rated / stats.num_quotes) * 100).toFixed(3);
+		statsLoading = false;
+	}
 
 	async function getQuotes() {
 		loading = true;
@@ -29,6 +45,7 @@
 
 		await fetch(`https://quotes.3nt3.de/api/vote/${id}/${vote}`, { method: 'post' });
 
+		getStats();
 		setTimeout(() => getQuotes(), 300);
 		// const otherQuote = quotes.filter((q) => q.id != id)[0].id;
 		// await fetch(`https://quotes.3nt3.de/api/vote/{otherQuote}/-1`);
@@ -36,6 +53,20 @@
 </script>
 
 <h1 class="mdc-typography--headline3">Vote</h1>
+<div>
+	<input
+		type="checkbox"
+		checked={preferUnrated}
+		onchange={() => (preferUnrated = !preferUnrated)}
+	/> <span>Prefer unrated quotes</span>
+</div>
+<p class="mdc-typography--body2">
+	{#if !statsLoading && percentRated}
+		{percentRated}% ({stats.num_rated}) of quotes ({stats.num_quotes}) have been rated by someone
+	{:else}
+		Loading...
+	{/if}
+</p>
 <div id="container">
 	<div id="quotes">
 		{#if loading}
