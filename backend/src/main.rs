@@ -222,7 +222,8 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
 struct PersonWithNumber {
     username: Option<String>,
     user_id: String,
-    score: Option<f64>,
+    sum_score: Option<f64>,
+    avg_score: Option<f64>,
     n_votes: Option<i64>,
     n_quotes: Option<i64>,
 }
@@ -231,7 +232,7 @@ struct PersonWithNumber {
 async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> {
     let pool = POOL.get().unwrap();
 
-    let res = sqlx::query!("select q.author_id, sum(x.score) as sum_score, count(x.score) as n_votes from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id where author_id is not null group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by sum_score desc ;").fetch_all(pool).await.unwrap();
+    let res = sqlx::query!("select q.author_id, sum(x.score) as sum_score, avg(x.score) as avg_score, count(x.score) as n_votes from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id where author_id is not null group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by sum_score desc ;").fetch_all(pool).await.unwrap();
 
     let username_futures = res
         .iter()
@@ -250,7 +251,8 @@ async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> 
             .map(move |(i, r)| PersonWithNumber {
                 username: usernames[i].as_ref().cloned(),
                 user_id: (&r.author_id).to_string(),
-                score: r.sum_score.as_ref().map(|x| x.to_f64().unwrap_or(0.0)),
+                sum_score: r.sum_score.as_ref().map(|x| x.to_f64().unwrap_or(0.0)),
+                avg_score: r.avg_score.as_ref().map(|x| x.to_f64().unwrap_or(0.0)),
                 n_votes: r.n_votes,
                 n_quotes: n_quotes.get(&r.author_id).copied(),
             })
