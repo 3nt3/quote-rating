@@ -231,7 +231,7 @@ struct PersonWithNumber {
 async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> {
     let pool = POOL.get().unwrap();
 
-    let res = sqlx::query!("select q.author_id, sum(x.score) as sum_score, count(x.score) as n_votes from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by sum_score desc;").fetch_all(pool).await.unwrap();
+    let res = sqlx::query!("select q.author_id, sum(x.score) as sum_score, count(x.score) as n_votes from (select quote_id, sum(vote) as score from votes left join quotes q on votes.quote_id = q.id where author_id is not null group by quote_id) as x left join quotes as q on quote_id = q.id group by q.author_id order by sum_score desc ;").fetch_all(pool).await.unwrap();
 
     let username_futures = res
         .iter()
