@@ -29,7 +29,7 @@
 
 	async function getQuotes() {
 		loading = true;
-    const res = await fetch(`https://quotes.3nt3.de/api/quote?prefer_unrated=${preferUnrated}`);
+		const res = await fetch(`https://quotes.3nt3.de/api/quote?prefer_unrated=${preferUnrated}`);
 		quotes = await res.json();
 		loading = false;
 	}
@@ -57,8 +57,9 @@
 	<input
 		type="checkbox"
 		checked={preferUnrated}
-		onchange={() => (preferUnrated = !preferUnrated)}
-	/> <span>Prefer unrated quotes</span>
+		on:change={() => (preferUnrated = !preferUnrated)}
+	/>
+	<span>Prefer unrated quotes</span>
 </div>
 <p class="mdc-typography--body2">
 	{#if !statsLoading && percentRated}

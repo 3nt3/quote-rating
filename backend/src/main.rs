@@ -64,7 +64,7 @@ async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec<Quo
                                         from quotes
                                                  left join votes v on quotes.id = v.quote_id
                                         group by quotes.id
-                                        order by (select count(1) from votes where votes.quote_id = id) asc
+                                        order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc
                                         limit 2
                                         "#).fetch_all(pool).await.unwrap();
     } else {
