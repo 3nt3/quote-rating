@@ -1,6 +1,7 @@
 use std::{env, fs, process::exit};
 
 use once_cell::sync::OnceCell;
+use prompts::{confirm::ConfirmPrompt, Prompt};
 use regex::Regex;
 use serde::Deserialize;
 use serenity::{
@@ -179,6 +180,54 @@ fn some_kind_of_uppercase_first_letter(s: &str) -> String {
     }
 }
 
+/// Removes content dupliactes
+async fn remove_duplicates() -> sqlx::Result<()> {
+    let pool = POOL.get().unwrap();
+
+    #[derive(Debug)]
+    struct Row {
+        id: i32,
+    }
+
+    let duplicates: Vec<Row> = sqlx::query_as!(Row,
+        "select quotes.id from quotes right join (select quotes.content, count(*) from quotes group by quotes.content having count(*) > 1) as x on quotes.content = x.content")
+    .fetch_all(pool)
+    .await?;
+
+    for duplicate in &duplicates {
+        println!("{:?}", duplicate);
+    }
+    println!("Found {} duplicates.", duplicates.len());
+
+    let mut prompt = ConfirmPrompt::new("Do you want to delete them?").set_initial(false);
+
+    if duplicates.len() == 0 {
+        return Ok(());
+    }
+
+    if let Ok(value) = prompt.run().await {
+        if !value.unwrap_or(false) {
+            return Ok(());
+        }
+        let comma_seperated = duplicates
+            .iter()
+            .map(|x| x.id.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+
+        sqlx::query(&format!(
+            "delete from quotes where quotes.id in ({})",
+            comma_seperated
+        ))
+        .execute(pool)
+        .await?;
+
+        println!("deleted {} duplicates", duplicates.len());
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() {
     // read configuration
@@ -191,6 +240,9 @@ async fn main() {
 
     let pool = connect_db().await;
     POOL.set(pool).unwrap();
+
+    // remove duplicates
+    remove_duplicates().await.unwrap();
 
     // set up discord bot
     let framework = StandardFramework::new()
