@@ -1,6 +1,5 @@
 use std::{env, fs, process::exit};
 
-use chrono::{NaiveDateTime, Utc};
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use serde::Deserialize;
@@ -10,7 +9,6 @@ use serenity::{
     futures::StreamExt,
     model::prelude::*,
     prelude::*,
-    utils::content_safe,
     Client,
 };
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
@@ -48,14 +46,14 @@ impl EventHandler for Handler {
         }
         let query_res = sqlx::query!(
             "SELECT id FROM quotes WHERE content = $1 AND author_id = $2",
-            &msg.content,
+            &remove_my_deadname(&msg.content),
             msg.author.id.0.to_string(),
         )
         .fetch_optional(pool)
         .await;
         match query_res {
             Ok(foo) => {
-                if let Some(_) = foo {
+                if foo.is_some() {
                     return;
                 }
             }
@@ -164,11 +162,13 @@ impl EventHandler for Handler {
 
 /// Removes all occurences of deadname and Deadname and replaces them with [Nia]
 fn remove_my_deadname(text: &str) -> String {
-    let deadname = env::var("DEADNAME").unwrap_or("".to_owned());
-
-    return text
-        .replace(&deadname, "[Nia]")
-        .replace(&some_kind_of_uppercase_first_letter(&deadname), "[Nia]");
+    let maybe_deadname = env::var("DEADNAME");
+    match maybe_deadname {
+        Ok(deadname) => text
+            .replace(&deadname, "[Nia]")
+            .replace(&some_kind_of_uppercase_first_letter(&deadname), "[Nia]"),
+        Err(_) => text.to_owned(),
+    }
 }
 
 fn some_kind_of_uppercase_first_letter(s: &str) -> String {

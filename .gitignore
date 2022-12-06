@@ -2,3 +2,4 @@ api/target
 discord/target
 venv
 .idea
+.env
