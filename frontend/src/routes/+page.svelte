@@ -36,11 +36,11 @@
 			<div class="bg-indigo-400 h-1" style="width: {progress ? progress : 0}%" />
 		</div>
 		<p
-			class="text-xs text-slate-300 opacity-0 ease-in-out duration-300"
+			class="text-xs text-slate-200 opacity-0 ease-in-out duration-300"
 			class:opacity-100={!progressLoading}
 		>
 			{#if !progressError}
-				{progress.toFixed(0)}% rated
+				{progress.toFixed(1)}% rated
 			{:else}
 				error talking to server 😥
 			{/if}
@@ -54,15 +54,14 @@
 		>
 			<a
 				href="/vote"
-				class="flex items-center justify-center bg-slate-800 rounded-xl w-full sm:w-72 h-32 border-2 border-slate-700"
+				class="flex items-center justify-center bg-slate-800 rounded-xl w-full sm:w-72 h-32 border-2 border-slate-700 hover:border-indigo-400 transition-colors ease-in-out duration-300"
 				>Vote</a
 			>
 			<a
 				href="/leaderboard"
-				class="flex items-center justify-center  bg-slate-800 rounded-xl w-full sm:w-72 h-32 border-2 border-slate-700"
+				class="flex items-center justify-center bg-slate-800 rounded-xl w-full sm:w-72 h-32 border-2 border-slate-700 hover:border-indigo-400 transition-colors ease-in-out duration-300"
 				>Leaderboard</a
 			>
 		</div>
 	</div>
-	<!-- content -->
 </main>
