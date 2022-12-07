@@ -69,9 +69,11 @@
 			{/if}
 		</p>
 	</div>
-	<div class="text-slate-200 flex col sm:row justify-center w-full h-full items-center">
+	<div
+		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden"
+	>
 		{#if !quotesError}
-			<div class="flex gap-4">
+			<div class="flex gap-4 sm:flex-row flex-col">
 				{#each quotes as quote}
 					<QuoteComponent {quote} />
 				{/each}

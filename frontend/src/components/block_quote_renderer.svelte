@@ -6,7 +6,7 @@
 	<div class="fill-white ">
 		<DoubleQuoteSvg />
 	</div>
-	<div class="p-4 text-center">
+	<div class="p-4 text-justify break-words">
 		<slot />
 	</div>
 	<div class="fill-white transform rotate-180">

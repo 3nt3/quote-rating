@@ -8,5 +8,6 @@ export interface Quote {
   score: number;
   channel_id: number;
   message_id: number;
-  message_link: string
+  message_link: string;
+  avatar_url: string;
 }
