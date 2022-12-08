@@ -93,7 +93,24 @@
 			Loading
 		{:else if !quotesError}
 			<div class="w-[min(800px,90%)] flex flex-col gap-4">
-				<div class="flex justify-end gap-2">
+				<div class="flex justify-end gap-2 items-center">
+					<a
+						href="/"
+						class="justify-self-start mr-auto justify-center rounded-full p-2 text-sm font-medium text-slate-300  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="w-6 h-6"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M11.03 3.97a.75.75 0 010 1.06l-6.22 6.22H21a.75.75 0 010 1.5H4.81l6.22 6.22a.75.75 0 11-1.06 1.06l-7.5-7.5a.75.75 0 010-1.06l7.5-7.5a.75.75 0 011.06 0z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</a>
 					<Dropdown
 						active={options.preferUnrated ? 'yes' : 'no'}
 						options={{ yes: 'Yes', no: 'No' }}
@@ -101,7 +118,7 @@
 						onChange={onDropdownChange}
 					/>
 					<button
-						class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600"
+						class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"
 						on:click={() => {
 							fetchQuotes();
 						}}>Apply</button
@@ -115,8 +132,9 @@
 				</div>
 				<div class="flex justify-center">
 					<button
-						class="stroke-teal-500 rounded-full p-2 ring-1 ring-teal-500 hover:ring-2 transition-shadow ease-in-out duration-300 "
+						class="rounded-full p-2 ring-1 ring-slate-500 hover:ring-2 transition-shadow ease-in-out duration-300 "
 						on:click={fetchQuotes}
+						title="Get new quotes"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"

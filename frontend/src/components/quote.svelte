@@ -34,6 +34,7 @@
 		<button
 			on:click={() => onVote(quote.id, -1)}
 			class="stroke-red-400 rounded-full p-2 ring-1 ring-red-400 hover:ring-2 transition-shadow ease-in-out duration-300"
+			title="Downvote"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -49,6 +50,7 @@
 		<button
 			on:click={() => onVote(quote.id, +1)}
 			class="stroke-teal-500 rounded-full p-2 ring-1 ring-teal-500 hover:ring-2 transition-shadow ease-in-out duration-300"
+			title="Upvote"
 		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
