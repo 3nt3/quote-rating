@@ -3,3 +3,4 @@ discord/target
 venv
 .idea
 .env
+node_modules
