@@ -1,176 +1,162 @@
-<script async lang="ts">
-	import Card, { Content, Actions, Media, MediaContent } from '@smui/card';
-	import IconButton, { Icon } from '@smui/icon-button';
-	import Button, { Label } from '@smui/button';
-	import CircularProgressIndicator from '@smui/circular-progress';
+<script lang="ts">
+	// TODO: don't just copy this from the other file
+	import { API_URL } from '../../../src/api';
 	import { onMount } from 'svelte';
-	let quotes: any = [];
-	let loading = true;
-	let statsLoading = true;
+	import QuoteComponent from '../../components/quote.svelte';
+	import type { Quote } from '../../models';
+	import Dropdown from '../../components/dropdown.svelte';
 
-	let preferUnrated = true;
+	let progress = 100;
+	let progressLoading = true;
+	let progressError = false;
 
-	let stats: any = {};
-	let percentRated: string | null = null;
+	let quotes: Quote[] = [];
+	let quotesLoading = true;
+	let quotesError = false;
 
-	onMount(async () => {
-		await getQuotes();
-		await getStats();
+	interface Options {
+		preferUnrated: Boolean;
+	}
+
+	let options: Options = {
+		preferUnrated: true
+	};
+
+	onMount(() => {
+		fetchProgress();
+		fetchQuotes();
 	});
 
-	async function getStats() {
-		statsLoading = true;
-		const res = await fetch('https://quotes.3nt3.de/api/stats?format=json');
-		stats = await res.json();
+	async function fetchProgress() {
+		progressLoading = true;
+		try {
+			const res = await fetch(API_URL + '/stats?format=json');
+			const stats = await res.json();
+			progress = (stats.num_rated / stats.num_quotes) * 100;
+			progressError = false;
+		} catch {
+			progressError = true;
+		}
 
-		percentRated = ((stats.num_rated / stats.num_quotes) * 100).toFixed(3);
-		statsLoading = false;
+		progressLoading = false;
 	}
 
-	async function getQuotes() {
-		loading = true;
-		const res = await fetch(`https://quotes.3nt3.de/api/quote?prefer_unrated=${preferUnrated}`);
-		quotes = await res.json();
-		loading = false;
+	async function fetchQuotes() {
+		quotesLoading = true;
+		try {
+			const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}`);
+			quotes = await res.json();
+			quotesError = false;
+		} catch {
+			quotesError = true;
+		}
+		quotesLoading = false;
 	}
 
-	async function vote(id: number, vote: -1 | 1) {
-		quotes = quotes.map((x: any) => {
-			if (x.id == id) {
-				return { ...x, score: x.score + vote };
-			} else {
-				return x;
-			}
-		});
+	async function vote(id: number, vote: number) {
+		const res = await fetch(API_URL + `/vote/${id}/${vote}`, { method: 'POST' });
+		fetchQuotes();
+		fetchProgress();
+	}
 
-		await fetch(`https://quotes.3nt3.de/api/vote/${id}/${vote}`, { method: 'post' });
-
-		getStats();
-		setTimeout(() => getQuotes(), 300);
-		// const otherQuote = quotes.filter((q) => q.id != id)[0].id;
-		// await fetch(`https://quotes.3nt3.de/api/vote/{otherQuote}/-1`);
+	function onDropdownChange(newValue: string) {
+		options.preferUnrated = newValue === 'yes';
 	}
 </script>
 
-<h1 class="mdc-typography--headline3">Vote</h1>
-<div>
-	<input
-		type="checkbox"
-		checked={preferUnrated}
-		on:change={() => (preferUnrated = !preferUnrated)}
-	/>
-	<span>Prefer unrated quotes</span>
-</div>
-<p class="mdc-typography--body2">
-	{#if !statsLoading && percentRated}
-		{percentRated}% ({stats.num_rated}) of quotes ({stats.num_quotes}) have been rated by someone
-	{:else}
-		Loading...
-	{/if}
-</p>
-<div id="container">
-	<div id="quotes">
-		{#if loading}
-			<CircularProgressIndicator style="width: 32px; height: 32px" class="spinner" indeterminate />
-		{:else}
-			{#each quotes as quote}
-				<div class="quote">
-					<Card>
-						<Media class="card-media-16x9" aspectRatio="16x9">
-							<MediaContent
-								style={`background-image: url(${quote.avatar_url}); background-size: cover; background-position: center;`}
-							/>
-						</Media>
-						<Content class="quote-content">
-							<h2 class="username mdc-typography--headline5">{quote.username}</h2>
-							<code class="code">{quote.content}</code>
-							<p
-								class={`mdc-typography--body1 ${
-									quote.score > 0 ? 'green' : quote.score < 0 ? 'red' : ''
-								}`}
-							>
-								Score: {quote.score}
-							</p>
-							<Button href={quote.message_link} target="_blank"><Label>View Message</Label></Button
-							></Content
+<main class="bg-slate-900 min-h-screen overflow-hidden">
+	<div
+		class="flex items-center flex-col gap-1 ease-in-out transition-color transition-opacity duration-300 w-screen"
+	>
+		<div
+			class="w-screen bg-slate-800 transition-color duration-300"
+			class:animate-pulse={progressLoading}
+			class:bg-red-500={progressError}
+		>
+			<div class="bg-indigo-400 h-1" style="width: {progress ? progress : 100}%" />
+		</div>
+		<p
+			class="text-xs text-slate-200 opacity-0 ease-in-out duration-300"
+			class:opacity-100={!progressLoading}
+		>
+			{#if !progressError}
+				{progress.toFixed(2)}% rated
+			{:else}
+				error talking to server 😥
+			{/if}
+		</p>
+	</div>
+	<div
+		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 min-h-screen"
+	>
+		{#if quotesLoading}
+			Loading
+		{:else if !quotesError}
+			<div class="w-[min(800px,90%)] flex flex-col gap-4">
+				<div class="flex justify-end gap-2 items-center">
+					<a
+						href="/"
+						aria-label="Go back"
+						class="justify-self-start mr-auto justify-center rounded-full p-2 text-sm font-medium text-slate-300  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="w-6 h-6"
+							aria-hidden="true"
 						>
-						<Actions>
-							<IconButton class="material-icons" on:click={() => vote(quote.id, 1)}
-								>favorite_border</IconButton
-							>
-							<IconButton class="material-icons" on:click={() => vote(quote.id, -1)}
-								>remove_circle_outline</IconButton
-							>
-						</Actions>
-					</Card>
+							<path
+								fill-rule="evenodd"
+								d="M11.03 3.97a.75.75 0 010 1.06l-6.22 6.22H21a.75.75 0 010 1.5H4.81l6.22 6.22a.75.75 0 11-1.06 1.06l-7.5-7.5a.75.75 0 010-1.06l7.5-7.5a.75.75 0 011.06 0z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</a>
+					<Dropdown
+						active={options.preferUnrated ? 'yes' : 'no'}
+						options={{ yes: 'Yes', no: 'No' }}
+						title={'Prefer unrated?'}
+						onChange={onDropdownChange}
+					/>
+					<button
+						class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"
+						on:click={() => {
+							fetchQuotes();
+						}}>Apply</button
+					>
+					<!-- <Dropdown /> -->
 				</div>
-			{/each}
+				<div class="flex gap-4 sm:flex-row flex-col">
+					{#each quotes as quote}
+						<QuoteComponent {quote} onVote={vote} />
+					{/each}
+				</div>
+				<div class="flex justify-center">
+					<button
+						class="rounded-full p-2 ring-1 ring-slate-500 hover:ring-2 transition-shadow ease-in-out duration-300 "
+						on:click={fetchQuotes}
+						title="Get new quotes"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width={1.5}
+							stroke="currentColor"
+							class="w-6 h-6"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+							/>
+						</svg>
+					</button>
+				</div>
+			</div>
+		{:else}
+			error talking to server 😥
 		{/if}
 	</div>
-	<Button on:click={getQuotes}
-		><Icon class="material-icons">shuffle</Icon><Label>Skip</Label></Button
-	>
-</div>
-
-<style lang="scss">
-	#container {
-		width: 100vw;
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		flex-direction: column;
-		gap: 2rem;
-	}
-	#quotes {
-		display: flex;
-		gap: 1rem;
-		justify-content: center;
-		min-height: 300px;
-
-		transition: all 1s ease-in-out;
-
-		width: min(1000px, 90%);
-	}
-	.quote {
-		flex: 1 !important;
-		code {
-			display: block;
-			white-space: pre-wrap;
-			word-wrap: break-word;
-			hyphens: auto;
-			-webkit-hyphens: auto;
-		}
-
-		width: 50%;
-
-		.username {
-			margin-top: 0;
-			margin-bottom: 1rem;
-		}
-
-		.green {
-			color: #4caf50;
-		}
-		.red {
-			color: #f44336;
-		}
-	}
-
-	.spinner {
-		margin: auto;
-		align-self: center;
-	}
-
-	@media screen and (max-width: 600px) {
-		#container {
-			width: min(1000px, 90%);
-			margin: 0 auto;
-		}
-		#quotes {
-			flex-direction: column;
-			.quote {
-				width: 100%;
-			}
-		}
-	}
-</style>
+</main>
