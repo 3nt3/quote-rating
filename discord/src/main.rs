@@ -1,7 +1,7 @@
 use std::{env, fs, process::exit};
 
-use chrono::{NaiveDateTime, Utc};
 use once_cell::sync::OnceCell;
+use prompts::{confirm::ConfirmPrompt, Prompt};
 use regex::Regex;
 use serde::Deserialize;
 use serenity::{
@@ -10,7 +10,6 @@ use serenity::{
     futures::StreamExt,
     model::prelude::*,
     prelude::*,
-    utils::content_safe,
     Client,
 };
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
@@ -48,14 +47,14 @@ impl EventHandler for Handler {
         }
         let query_res = sqlx::query!(
             "SELECT id FROM quotes WHERE content = $1 AND author_id = $2",
-            &msg.content,
+            &remove_my_deadname(&msg.content),
             msg.author.id.0.to_string(),
         )
         .fetch_optional(pool)
         .await;
         match query_res {
             Ok(foo) => {
-                if let Some(_) = foo {
+                if foo.is_some() {
                     return;
                 }
             }
@@ -164,11 +163,13 @@ impl EventHandler for Handler {
 
 /// Removes all occurences of deadname and Deadname and replaces them with [Nia]
 fn remove_my_deadname(text: &str) -> String {
-    let deadname = env::var("DEADNAME").unwrap_or("".to_owned());
-
-    return text
-        .replace(&deadname, "[Nia]")
-        .replace(&some_kind_of_uppercase_first_letter(&deadname), "[Nia]");
+    let maybe_deadname = env::var("DEADNAME");
+    match maybe_deadname {
+        Ok(deadname) => text
+            .replace(&deadname, "[Nia]")
+            .replace(&some_kind_of_uppercase_first_letter(&deadname), "[Nia]"),
+        Err(_) => text.to_owned(),
+    }
 }
 
 fn some_kind_of_uppercase_first_letter(s: &str) -> String {
@@ -177,6 +178,54 @@ fn some_kind_of_uppercase_first_letter(s: &str) -> String {
         None => String::new(),
         Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
     }
+}
+
+/// Removes content dupliactes
+async fn remove_duplicates() -> sqlx::Result<()> {
+    let pool = POOL.get().unwrap();
+
+    #[derive(Debug)]
+    struct Row {
+        id: i32,
+    }
+
+    let duplicates: Vec<Row> = sqlx::query_as!(Row,
+        "select quotes.id from quotes right join (select quotes.content, count(*) from quotes group by quotes.content having count(*) > 1) as x on quotes.content = x.content")
+    .fetch_all(pool)
+    .await?;
+
+    for duplicate in &duplicates {
+        println!("{:?}", duplicate);
+    }
+    println!("Found {} duplicates.", duplicates.len());
+
+    let mut prompt = ConfirmPrompt::new("Do you want to delete them?").set_initial(false);
+
+    if duplicates.len() == 0 {
+        return Ok(());
+    }
+
+    if let Ok(value) = prompt.run().await {
+        if !value.unwrap_or(false) {
+            return Ok(());
+        }
+        let comma_seperated = duplicates
+            .iter()
+            .map(|x| x.id.to_string())
+            .collect::<Vec<String>>()
+            .join(",");
+
+        sqlx::query(&format!(
+            "delete from quotes where quotes.id in ({})",
+            comma_seperated
+        ))
+        .execute(pool)
+        .await?;
+
+        println!("deleted {} duplicates", duplicates.len());
+    }
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -191,6 +240,9 @@ async fn main() {
 
     let pool = connect_db().await;
     POOL.set(pool).unwrap();
+
+    // remove duplicates
+    remove_duplicates().await.unwrap();
 
     // set up discord bot
     let framework = StandardFramework::new()
