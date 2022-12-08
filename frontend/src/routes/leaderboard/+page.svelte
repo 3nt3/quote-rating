@@ -5,6 +5,11 @@
 	import QuoteComponent from '../../components/quote.svelte';
 	import type { Quote } from '../../models';
 	import { fade } from 'svelte/transition';
+	import { Bar } from 'svelte-chartjs';
+	import { Chart, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale } from 'chart.js';
+	Chart.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale);
+	Chart.defaults.color = '#CBD5E1'; // slate-300
+	Chart.defaults.borderColor = '#334155'; // slate-300
 
 	let leaderboardLoading = true;
 	let leaderboard: Quote[] | null = null;
@@ -14,19 +19,66 @@
 	let funniestPeople = null;
 	let funniestPeopleError = false;
 
+	let top100ChartData = {};
+
 	onMount(() => {
 		fetchLeaderboard();
 		fetchFunniestPeople();
 	});
 
 	async function fetchLeaderboard() {
+		leaderboardLoading = true;
 		try {
 			let res = await fetch(API_URL + '/leaderboard');
 			leaderboard = await res.json();
 			leaderboardError = false;
+
+			const usersSummedScores = leaderboard?.reduce(
+				(prev: any, quote: Quote) => ({
+					...prev,
+					[quote.author_id]: (prev[quote.author_id] || 0) + quote.score
+				}),
+				{}
+			);
+
+			const usernames = leaderboard?.reduce(
+				(prev: any, quote: Quote) => ({
+					...prev,
+					[quote.author_id]: quote.username
+				}),
+				{}
+			);
+
+			const usersQuoteCount = Object.entries(
+				leaderboard?.reduce(
+					(prev: any, quote: Quote) => ({
+						...prev,
+						[quote.author_id]: (prev[quote.author_id] || 0) + 1
+					}),
+					{}
+				)
+			)
+				.sort((a: [string, any], b: [string, any]) => b[1] - a[1])
+				.map((x) => [...x, usernames[x[0]]])
+				.filter((x) => x[2]); // remove empty usernames
+
+			top100ChartData = {
+				labels: usersQuoteCount.map((x) => x[2]),
+				datasets: [
+					{
+						label: 'Amount of quotes in top 100',
+						data: usersQuoteCount.map((x) => x[1]),
+						backgroundColor: ['rgba(244, 63, 94, 0.4)'],
+						borderColor: ['rgba(244, 63, 94, 0.8)'],
+						borderWidth: 1
+					}
+				]
+			};
+			console.log(top100ChartData);
 		} catch {
 			leaderboardError = true;
 		}
+		leaderboardLoading = false;
 	}
 
 	async function fetchFunniestPeople() {
@@ -49,7 +101,9 @@
 	}
 </script>
 
-<main class="w-screen min-h-screen bg-slate-900 text-slate-300 flex justify-center">
+<main
+	class="w-screen min-h-screen bg-slate-900 text-slate-300 flex justify-center overflow-x-hidden"
+>
 	<div class="sm:mt-12 w-[min(900px,90%)]">
 		<a
 			href="/"
@@ -74,7 +128,7 @@
 			<h1 class="text-2xl">Top 100</h1>
 			<p>Pls don't spam we gotta appreciate the tastiest fruits 🍉</p>
 
-			{#if !leaderboard}
+			{#if leaderboardLoading}
 				<div
 					class="flex justify-center items-center h-72"
 					in:fade={{ duration: 150 }}
@@ -84,6 +138,16 @@
 				</div>
 			{:else}
 				<div class="flex flex-col gap-4 mt-4" in:fade={{ duration: 150 }}>
+					<Bar
+						data={top100ChartData}
+						responsive={true}
+						height={200}
+						options={{
+							scales: { x: { grid: { display: false } }, y: { grid: { display: false } } },
+							elements: { bar: { borderRadius: 4 } },
+							plugins: { legend: { onClick: () => {} } }
+						}}
+					/>
 					{#each leaderboard || [] as quote}
 						<QuoteComponent {quote} compact={true} {onVote} />
 					{/each}
