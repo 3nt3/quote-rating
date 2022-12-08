@@ -63,5 +63,8 @@
 				>Leaderboard</a
 			>
 		</div>
+		<div class="justify-self-end">
+			Made by <span>Nia [INTP-T] 🦆</span>
+		</div>
 	</div>
 </main>

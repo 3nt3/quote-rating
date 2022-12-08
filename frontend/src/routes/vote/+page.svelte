@@ -96,6 +96,7 @@
 				<div class="flex justify-end gap-2 items-center">
 					<a
 						href="/"
+						aria-label="Go back"
 						class="justify-self-start mr-auto justify-center rounded-full p-2 text-sm font-medium text-slate-300  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
 					>
 						<svg
@@ -103,6 +104,7 @@
 							viewBox="0 0 24 24"
 							fill="currentColor"
 							class="w-6 h-6"
+							aria-hidden="true"
 						>
 							<path
 								fill-rule="evenodd"
