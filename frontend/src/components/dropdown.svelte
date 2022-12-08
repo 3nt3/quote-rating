@@ -48,7 +48,7 @@
 			aria-haspopup="true"
 			on:click={() => (show = !show)}
 		>
-			{title}
+			{title}: {options[active]}
 			<!-- Heroicon name: mini/chevron-down -->
 			<svg
 				class="-mr-1 ml-2 h-5 w-5"

@@ -18,17 +18,9 @@
 		preferUnrated: Boolean;
 	}
 
-	let activeOptions: Options = {
-		preferUnrated: true
-	};
 	let options: Options = {
 		preferUnrated: true
 	};
-
-	let applyButtonEnabled = JSON.stringify(activeOptions) !== JSON.stringify(options);
-	$: {
-		applyButtonEnabled = JSON.stringify(activeOptions) !== JSON.stringify(options);
-	}
 
 	onMount(() => {
 		fetchProgress();
@@ -52,7 +44,7 @@
 	async function fetchQuotes() {
 		quotesLoading = true;
 		try {
-			const res = await fetch(API_URL + `/quote?preferUnrated=${activeOptions.preferUnrated}`);
+			const res = await fetch(API_URL + `/quote?preferUnrated=${options.preferUnrated}`);
 			quotes = await res.json();
 			quotesError = false;
 		} catch {
@@ -69,8 +61,6 @@
 
 	function onDropdownChange(newValue: string) {
 		options.preferUnrated = newValue === 'yes';
-		console.log(options);
-		console.log(activeOptions);
 	}
 </script>
 
@@ -111,11 +101,8 @@
 						onChange={onDropdownChange}
 					/>
 					<button
-						disabled={!applyButtonEnabled}
-						class={'px-4 rounded-md transition-all text-sm ' +
-							(applyButtonEnabled ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-slate-600')}
+						class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600"
 						on:click={() => {
-							activeOptions = options;
 							fetchQuotes();
 						}}>Apply</button
 					>
@@ -129,6 +116,7 @@
 				<div class="flex justify-center">
 					<button
 						class="stroke-teal-500 rounded-full p-2 ring-1 ring-teal-500 hover:ring-2 transition-shadow ease-in-out duration-300 "
+						on:click={fetchQuotes}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
