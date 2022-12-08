@@ -129,7 +129,7 @@
 				</div>
 				<div class="flex gap-4 sm:flex-row flex-col">
 					{#each quotes as quote}
-						<QuoteComponent {quote} onVote={vote} />
+						<QuoteComponent {quote} onVote={vote} compact={false} />
 					{/each}
 				</div>
 				<div class="flex justify-center">
