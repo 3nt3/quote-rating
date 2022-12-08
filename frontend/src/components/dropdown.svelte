@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { scale } from 'svelte/transition';
 	let show = false;
-	let menu = null;
+	let menu: HTMLDivElement | null = null;
 
 	export let active: string;
 	export let options: { [key: string]: string };
@@ -11,12 +11,12 @@
 
 	onMount(() => {
 		const handleOutsideClick = (event: any) => {
-			if (show && !menu.contains(event.target)) {
+			if (show && menu && !menu.contains(event.target)) {
 				show = false;
 			}
 		};
 
-		const handleEscape = (event) => {
+		const handleEscape = (event: { key: string }) => {
 			if (show && event.key === 'Escape') {
 				show = false;
 			}

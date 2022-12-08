@@ -8,7 +8,6 @@
 		href: string;
 		label: string;
 	}[];
-	export let onChange: Function;
 
 	onMount(() => {
 		const handleOutsideClick = (event: any) => {
@@ -17,7 +16,7 @@
 			}
 		};
 
-		const handleEscape = (event) => {
+		const handleEscape = (event: { key: string }) => {
 			if (show && event.key === 'Escape') {
 				show = false;
 			}

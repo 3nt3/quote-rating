@@ -14,7 +14,21 @@
 	let quotesLoading = true;
 	let quotesError = false;
 
-	let preferUnrated = true;
+	interface Options {
+		preferUnrated: Boolean;
+	}
+
+	let activeOptions: Options = {
+		preferUnrated: true
+	};
+	let options: Options = {
+		preferUnrated: true
+	};
+
+	let applyButtonEnabled = JSON.stringify(activeOptions) !== JSON.stringify(options);
+	$: {
+		applyButtonEnabled = JSON.stringify(activeOptions) !== JSON.stringify(options);
+	}
 
 	onMount(() => {
 		fetchProgress();
@@ -38,7 +52,7 @@
 	async function fetchQuotes() {
 		quotesLoading = true;
 		try {
-			const res = await fetch(API_URL + `/quote?preferUnrated=${preferUnrated}`);
+			const res = await fetch(API_URL + `/quote?preferUnrated=${activeOptions.preferUnrated}`);
 			quotes = await res.json();
 			quotesError = false;
 		} catch {
@@ -54,7 +68,9 @@
 	}
 
 	function onDropdownChange(newValue: string) {
-		preferUnrated = newValue === 'yes';
+		options.preferUnrated = newValue === 'yes';
+		console.log(options);
+		console.log(activeOptions);
 	}
 </script>
 
@@ -87,19 +103,48 @@
 			Loading
 		{:else if !quotesError}
 			<div class="w-[min(800px,90%)] flex flex-col gap-4">
-				<div class="flex justify-end">
+				<div class="flex justify-end gap-2">
 					<Dropdown
-						active={preferUnrated ? 'yes' : 'no'}
-						options={{ yes: 'yes', no: 'no' }}
+						active={options.preferUnrated ? 'yes' : 'no'}
+						options={{ yes: 'Yes', no: 'No' }}
 						title={'Prefer unrated?'}
 						onChange={onDropdownChange}
 					/>
+					<button
+						disabled={!applyButtonEnabled}
+						class={'px-4 rounded-md transition-all text-sm ' +
+							(applyButtonEnabled ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-slate-600')}
+						on:click={() => {
+							activeOptions = options;
+							fetchQuotes();
+						}}>Apply</button
+					>
 					<!-- <Dropdown /> -->
 				</div>
 				<div class="flex gap-4 sm:flex-row flex-col">
 					{#each quotes as quote}
 						<QuoteComponent {quote} onVote={vote} />
 					{/each}
+				</div>
+				<div class="flex justify-center">
+					<button
+						class="stroke-teal-500 rounded-full p-2 ring-1 ring-teal-500 hover:ring-2 transition-shadow ease-in-out duration-300 "
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width={1.5}
+							stroke="currentColor"
+							class="w-6 h-6"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+							/>
+						</svg>
+					</button>
 				</div>
 			</div>
 		{:else}
