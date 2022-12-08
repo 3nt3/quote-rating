@@ -3,16 +3,24 @@
 	import BlockQuoteRenderer from './block_quote_renderer.svelte';
 	import SvelteMarkdown from 'svelte-markdown';
 	import ListItemRenderer from './list_item_renderer.svelte';
+	import ThreeDotsDropdown from './three_dots_dropdown.svelte';
 
 	export let quote: Quote;
+	export let onVote: Function;
 
-	const quoteContent = quote.content.replace('\n', '\n').replace('^-', '—').replace('\n—', '\n\n—');
+	const quoteContent = quote.content
+		.replace('\n', '\n')
+		.replace(/^(-|--|–)/, '—')
+		.replace('\n—', '\n\n—');
 </script>
 
 <div class="bg-slate-800 rounded-xl p-6 flex-1 w-80 flex flex-col gap-4 ">
-	<div class="flex items-center gap-4">
-		<img class="rounded-full h-8" src={quote.avatar_url} alt={`${quote.username}'s avatar`} />
-		<h1 class="">{quote.username}</h1>
+	<div class="flex items-center justify-between">
+		<div class="flex items-center gap-4">
+			<img class="rounded-full h-8" src={quote.avatar_url} alt={`${quote.username}'s avatar`} />
+			<h1 class="">{quote.username}</h1>
+		</div>
+		<ThreeDotsDropdown links={[{ href: quote.message_link, label: 'View message in discord' }]} />
 	</div>
 	<!-- content -->
 	<div class="">
@@ -22,8 +30,9 @@
 		/>
 	</div>
 	<!-- actions -->
-	<div class="flex justify-center gap-6 mt-auto px-2">
+	<div class="flex justify-center gap-4 mt-auto px-2 items-center">
 		<button
+			on:click={() => onVote(quote.id, -1)}
 			class="stroke-red-400 rounded-full p-2 ring-1 ring-red-400 hover:ring-2 transition-shadow ease-in-out duration-300"
 		>
 			<svg
@@ -36,7 +45,9 @@
 				<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
 			</svg>
 		</button>
+		<span class="bg-slate-700 px-3 rounded-full">{quote.score}</span>
 		<button
+			on:click={() => onVote(quote.id, +1)}
 			class="stroke-teal-500 rounded-full p-2 ring-1 ring-teal-500 hover:ring-2 transition-shadow ease-in-out duration-300"
 		>
 			<svg

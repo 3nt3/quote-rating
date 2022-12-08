@@ -40,7 +40,7 @@
 			class:opacity-100={!progressLoading}
 		>
 			{#if !progressError}
-				{progress.toFixed(1)}% rated
+				{progress.toFixed(2)}% rated
 			{:else}
 				error talking to server 😥
 			{/if}

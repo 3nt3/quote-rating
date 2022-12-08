@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import QuoteComponent from '../../components/quote.svelte';
 	import type { Quote } from '../../models';
+	import Dropdown from '../../components/dropdown.svelte';
 
 	let progress = 100;
 	let progressLoading = true;
@@ -45,6 +46,16 @@
 		}
 		quotesLoading = false;
 	}
+
+	async function vote(id: number, vote: number) {
+		const res = await fetch(API_URL + `/vote/${id}/${vote}`, { method: 'POST' });
+		fetchQuotes();
+		fetchProgress();
+	}
+
+	function onDropdownChange(newValue: string) {
+		preferUnrated = newValue === 'yes';
+	}
 </script>
 
 <main class="bg-slate-900 h-screen overflow-hidden">
@@ -63,7 +74,7 @@
 			class:opacity-100={!progressLoading}
 		>
 			{#if !progressError}
-				{progress.toFixed(1)}% rated
+				{progress.toFixed(2)}% rated
 			{:else}
 				error talking to server 😥
 			{/if}
@@ -72,11 +83,24 @@
 	<div
 		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden"
 	>
-		{#if !quotesError}
-			<div class="flex gap-4 sm:flex-row flex-col">
-				{#each quotes as quote}
-					<QuoteComponent {quote} />
-				{/each}
+		{#if quotesLoading}
+			Loading
+		{:else if !quotesError}
+			<div class="w-[min(800px,90%)] flex flex-col gap-4">
+				<div class="flex justify-end">
+					<Dropdown
+						active={preferUnrated ? 'yes' : 'no'}
+						options={{ yes: 'yes', no: 'no' }}
+						title={'Prefer unrated?'}
+						onChange={onDropdownChange}
+					/>
+					<!-- <Dropdown /> -->
+				</div>
+				<div class="flex gap-4 sm:flex-row flex-col">
+					{#each quotes as quote}
+						<QuoteComponent {quote} onVote={vote} />
+					{/each}
+				</div>
 			</div>
 		{:else}
 			error talking to server 😥
