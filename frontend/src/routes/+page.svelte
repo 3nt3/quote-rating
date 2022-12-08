@@ -46,7 +46,7 @@
 			{/if}
 		</p>
 	</div>
-	<div class="flex justify-center items-center flex-col text-center text-slate-200 h-screen">
+	<div class="flex justify-center items-center flex-col text-center text-slate-200 h-screen mt-5">
 		<h1 class="text-4xl font-bold">quotes.3nt3.de</h1>
 		<p class="text-xl">"because there's just too many of them"</p>
 		<div
@@ -63,8 +63,8 @@
 				>Leaderboard</a
 			>
 		</div>
-		<div class="justify-self-end">
-			Made by <span>Nia [INTP-T] 🦆</span>
+		<div class="mt-10">
+			Made by <span class="text-orange-500">Nia [INTP-T] 🦆</span> with 💜
 		</div>
 	</div>
 </main>
