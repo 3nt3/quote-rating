@@ -75,7 +75,7 @@
 		<div
 			in:scale={{ duration: 100, start: 0.95 }}
 			out:scale={{ duration: 75, start: 0.95 }}
-			class="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-slate-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+			class="absolute right-0 z-10 mt-2 w-56 origin-top-right rounded-md bg-slate-800 shadow-lg shadow-slate-900 ring-1 ring-black ring-opacity-5 focus:outline-none"
 			role="menu"
 			aria-orientation="vertical"
 			aria-labelledby="menu-button"

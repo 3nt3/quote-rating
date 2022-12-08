@@ -44,7 +44,7 @@
 	async function fetchQuotes() {
 		quotesLoading = true;
 		try {
-			const res = await fetch(API_URL + `/quote?preferUnrated=${options.preferUnrated}`);
+			const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}`);
 			quotes = await res.json();
 			quotesError = false;
 		} catch {
@@ -87,7 +87,7 @@
 		</p>
 	</div>
 	<div
-		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-4 sm:mt-0"
+		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 min-h-screen"
 	>
 		{#if quotesLoading}
 			Loading
