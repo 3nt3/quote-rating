@@ -75,7 +75,7 @@
 	</div>
 {:else}
 	<div class="bg-slate-800 shadow-lg p-4 rounded-md border-2 border-slate-700">
-		<div class="flex justify-between items-center">
+		<div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
 			<div>
 				<div class="flex items-center gap-4">
 					<img class="rounded-full h-8" src={quote.avatar_url} alt={`${quote.username}'s avatar`} />
