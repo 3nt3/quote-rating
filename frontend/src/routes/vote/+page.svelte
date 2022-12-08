@@ -64,7 +64,7 @@
 	}
 </script>
 
-<main class="bg-slate-900 h-screen overflow-hidden">
+<main class="bg-slate-900 min-h-screen overflow-hidden">
 	<div
 		class="flex items-center flex-col gap-1 ease-in-out transition-color transition-opacity duration-300 w-screen"
 	>
@@ -87,7 +87,7 @@
 		</p>
 	</div>
 	<div
-		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden"
+		class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-4 sm:mt-0"
 	>
 		{#if quotesLoading}
 			Loading

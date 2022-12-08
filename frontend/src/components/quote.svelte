@@ -14,7 +14,7 @@
 		.replace('\n—', '\n\n—');
 </script>
 
-<div class="bg-slate-800 rounded-xl p-6 flex-1 w-80 flex flex-col gap-4 ">
+<div class="bg-slate-800 rounded-xl p-6 flex-1 sm:w-80 flex flex-col gap-4 ">
 	<div class="flex items-center justify-between">
 		<div class="flex items-center gap-4">
 			<img class="rounded-full h-8" src={quote.avatar_url} alt={`${quote.username}'s avatar`} />

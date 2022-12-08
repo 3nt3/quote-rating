@@ -42,7 +42,7 @@
 	<div>
 		<button
 			type="button"
-			class="inline-flex w-full justify-center rounded-md border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-300 shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
+			class="inline-flex w-full justify-center rounded-md border border-slate-700 bg-slate-800 px-4 py-2  text-xs sm:text-sm font-medium text-slate-300 shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
 			id="menu-button"
 			aria-expanded="true"
 			aria-haspopup="true"
