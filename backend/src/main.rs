@@ -2,6 +2,10 @@
 #[macro_use]
 extern crate rocket;
 
+mod discord;
+mod models;
+mod routes;
+
 use chrono::{serde::ts_milliseconds, Utc};
 use once_cell::sync::OnceCell;
 use rocket::{
@@ -17,6 +21,7 @@ use serenity::model::prelude::ChannelId;
 use serenity::model::prelude::{GuildId, UserId};
 use serenity::prelude::*;
 
+use crate::discord::get_username;
 use bigdecimal::ToPrimitive;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 use std::env;
@@ -24,165 +29,8 @@ use std::{collections::HashMap, fs};
 
 static POOL: OnceCell<Pool<Postgres>> = OnceCell::new();
 
-#[derive(Debug, Serialize)]
-#[serde(crate = "rocket::serde")]
-struct Quote {
-    id: i32,
-    content: String,
-    author_id: u64,
-    #[serde(with = "ts_milliseconds")]
-    created_at: chrono::DateTime<Utc>,
-    #[serde(with = "ts_milliseconds")]
-    sent_at: chrono::DateTime<Utc>,
-    avatar_url: String,
-    username: String,
-    score: i64,
-    channel_id: u64,
-    message_id: u64,
-    message_link: String,
-}
-
-#[get("/quote?<prefer_unrated>")]
-async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec<Quote>> {
-    let pool = POOL.get().unwrap();
-
-    struct QuoteButNotReally {
-        id: i32,
-        content: String,
-        author_id: String,
-        sent_at: chrono::DateTime<Utc>,
-        avatar_url: String,
-        message_id: String,
-        channel_id: String,
-        created_at: chrono::DateTime<Utc>,
-        score: Option<i64>, // there is literally no way this would ever be None sqlx is just dumb
-    }
-
-    let quote_records;
-    if prefer_unrated {
-        quote_records = sqlx::query_as!(QuoteButNotReally, r#"select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
-                                        from quotes
-                                                 left join votes v on quotes.id = v.quote_id
-                                        group by quotes.id
-                                        order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc
-                                        limit 2
-                                        "#).fetch_all(pool).await.unwrap();
-    } else {
-        quote_records = sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
-        .fetch_all(pool).await.unwrap();
-    }
-
-    // I kind of hate how this is structured
-    let (r1, r2) = (&quote_records[0], &quote_records[1]);
-    let (u1, u2) = (
-        get_username(&client, u64::from_str_radix(&r1.author_id, 10).unwrap())
-            .await
-            .unwrap_or((&"user not found").to_string()),
-        get_username(&client, u64::from_str_radix(&r2.author_id, 10).unwrap())
-            .await
-            .unwrap_or((&"user not found").to_string()),
-    );
-
-    let q1 = Quote {
-        id: r1.id,
-        content: r1.content.clone(),
-        author_id: u64::from_str_radix(&r1.author_id, 10).unwrap(),
-        avatar_url: (r1.avatar_url.clone()),
-        username: u1,
-        created_at: r1.created_at,
-        sent_at: r1.sent_at,
-        score: r1.score.unwrap_or(0),
-        channel_id: u64::from_str_radix(&r1.channel_id, 10).unwrap(),
-        message_id: u64::from_str_radix(&r1.message_id, 10).unwrap(),
-        message_link: MessageId(u64::from_str_radix(&r1.message_id, 10).unwrap())
-            .link_ensured(
-                &client.cache_and_http,
-                ChannelId(u64::from_str_radix(&r1.channel_id, 10).unwrap()),
-                Some(GuildId(816943824630710272)),
-            )
-            .await,
-    };
-    let q2 = Quote {
-        id: r2.id,
-        content: r2.content.clone(),
-        author_id: u64::from_str_radix(&r2.author_id, 10).unwrap(),
-        avatar_url: (r2.avatar_url.clone()),
-        username: u2,
-        created_at: r2.created_at,
-        sent_at: r2.sent_at,
-        score: r2.score.unwrap_or(0),
-        channel_id: u64::from_str_radix(&r2.channel_id, 10).unwrap(),
-        message_id: u64::from_str_radix(&r2.message_id, 10).unwrap(),
-        message_link: MessageId(u64::from_str_radix(&r2.message_id, 10).unwrap())
-            .link_ensured(
-                &client.cache_and_http,
-                ChannelId(u64::from_str_radix(&r2.channel_id, 10).unwrap()),
-                Some(GuildId(816943824630710272)),
-            )
-            .await,
-    };
-
-    Json(vec![q1, q2])
-}
-
-async fn get_username(client: &Client, user_id: u64) -> Option<String> {
-    let pool = POOL.get().unwrap();
-    let res = sqlx::query!(
-        "SELECT username from username_cache WHERE user_id = $1",
-        user_id.to_string()
-    )
-    .fetch_one(pool)
-    .await;
-
-    match res {
-        Ok(r) => {
-            return Some(r.username);
-        }
-        Err(_) => {
-            let maybe_nick = GuildId(816943824630710272)
-                .member(&client.cache_and_http.http, UserId(user_id))
-                .await
-                .map(|m| m.nick)
-                .ok()
-                .flatten();
-
-            if let Some(ref nick) = maybe_nick {
-                sqlx::query!(
-                    "insert into username_cache (user_id, username) values ($1, $2)",
-                    user_id.to_string(),
-                    nick
-                )
-                .execute(pool)
-                .await
-                .unwrap();
-            } else {
-                let maybe_username = UserId(user_id)
-                    .to_user(&client.cache_and_http)
-                    .await
-                    .map(|x| x.name)
-                    .ok();
-
-                if let Some(ref username) = maybe_username {
-                    sqlx::query!(
-                        "insert into username_cache (user_id, username) values ($1, $2)",
-                        user_id.to_string(),
-                        username
-                    )
-                    .execute(pool)
-                    .await
-                    .unwrap();
-                }
-
-                return maybe_username;
-            }
-
-            return maybe_nick;
-        }
-    }
-}
-
 #[get("/leaderboard")]
-async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
+async fn get_leaderboard(client: &State<Client>) -> Json<Vec<models::Quote>> {
     let pool = POOL.get().unwrap();
     let res = sqlx::query!(
         "SELECT * FROM (SELECT quotes.*, SUM(v.vote) AS score
@@ -219,7 +67,7 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
     let items = res
         .iter()
         .enumerate()
-        .map(move |(i, r)| Quote {
+        .map(move |(i, r)| models::Quote {
             id: r.id,
             content: r.content.clone(),
             author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
@@ -237,7 +85,7 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<Quote>> {
                 .to_string()
                 .to_string(),
         })
-        .collect::<Vec<Quote>>();
+        .collect::<Vec<models::Quote>>();
 
     Json(items)
 }
@@ -285,7 +133,7 @@ async fn funniest_people(client: &State<Client>) -> Json<Vec<PersonWithNumber>> 
 }
 
 #[post("/vote/<id>/<vote>")]
-async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
+async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<models::Quote> {
     let pool = POOL.get().unwrap();
 
     let vote_cleaned = if vote > 0 {
@@ -316,7 +164,7 @@ async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<Quote> {
     )
     .fetch_one(pool)
     .map_ok(async move |r| {
-        Json(Quote {
+        Json(models::Quote {
             id: r.id,
             content: r.content,
             author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
@@ -415,7 +263,14 @@ async fn main() -> anyhow::Result<()> {
         .manage(client)
         .mount(
             "/",
-            routes![get_quote, vote, get_leaderboard, get_stats, funniest_people],
+            routes![
+                routes::get_quote,
+                routes::get_all_scores,
+                vote,
+                get_leaderboard,
+                get_stats,
+                funniest_people
+            ],
         )
         .attach(cors)
         .launch()
