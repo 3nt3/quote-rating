@@ -2,16 +2,19 @@ use crate::util;
 use crate::POOL;
 use regex::Regex;
 
-use serenity::model::channel::Message;
 use serenity::client::Context;
+use serenity::model::channel::Message;
 
-pub async fn process_message(ctx: &Context, msg: Message) -> Result<(), Box<dyn std::error::Error>> {
-    println!(
-        "new message '{}' by {} in {}",
-        msg.content.replace("\n", " "),
-        msg.author.name,
-        msg.channel_id
-    );
+pub struct QuoteInfo {
+    pub is_quote: bool,
+    pub is_duplicate: bool,
+}
+
+pub async fn process_message(
+    ctx: &Context,
+    msg: Message,
+    silent: bool,
+) -> Result<QuoteInfo, Box<dyn std::error::Error>> {
     let re = Regex::new(r"> (.*)").unwrap();
     let maybe_match = re.find(&msg.content);
 
@@ -19,35 +22,63 @@ pub async fn process_message(ctx: &Context, msg: Message) -> Result<(), Box<dyn 
 
     if let None = maybe_match {
         // nothing to do, message is not a quote
-        return Ok(());
+        return Ok(QuoteInfo {
+            is_quote: false,
+            is_duplicate: false,
+        });
     }
+
+    let images: Vec<String> = msg
+        .attachments
+        .iter()
+        .filter(|a| {
+            (&(a.content_type.as_ref()))
+                .unwrap_or(&"".to_string())
+                .starts_with("image")
+        })
+        .map(|a| a.url.to_owned())
+        .collect();
+    for image in &images {
+        println!("an image!! {:?}", image);
+    }
+
     let query_res = sqlx::query!(
-        "SELECT id FROM quotes WHERE content = $1 AND author_id = $2",
+        "SELECT id FROM quotes WHERE content = $1 AND sent_at = $2 AND image_url = $3",
         &util::remove_my_deadname(&msg.content),
-        msg.author.id.0.to_string(),
+        *msg.timestamp,
+        images.get(0)
     )
     .fetch_optional(pool)
     .await?;
 
     if query_res.is_some() {
         // nothing to do, quote exists
-        return Ok(());
+        return Ok(QuoteInfo {
+            is_quote: true,
+            is_duplicate: true,
+        });
     }
 
-    println!("found a new quote 🎉: {}", &msg.content.replace("\n", ""));
+    if !silent {
+        println!("found a new quote 🎉: {}", &msg.content.replace("\n", ""));
+    }
 
     // let chrono_timestamp = chrono::DateTime::from_utc(NaiveDateTime::from_timestamp(, nsecs));
     sqlx::query!(
-            "INSERT INTO quotes (content, author_id, sent_at, avatar_url, message_id, channel_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO quotes (content, author_id, sent_at, avatar_url, message_id, channel_id, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             util::remove_my_deadname(&msg.content),
             msg.author.id.0.to_string(),
             *msg.timestamp,
             msg.author.avatar_url(),
             msg.id.0.to_string(),
-            msg.channel(&ctx).await.unwrap().id().0.to_string()
+            msg.channel(&ctx).await.unwrap().id().0.to_string(),
+            images.get(0)
         )
         .execute(pool)
         .await?;
 
-    Ok(())
+    Ok(QuoteInfo {
+        is_quote: true,
+        is_duplicate: false,
+    })
 }
