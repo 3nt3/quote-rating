@@ -43,10 +43,8 @@ pub async fn process_message(
     }
 
     let query_res = sqlx::query!(
-        "SELECT id FROM quotes WHERE content = $1 AND sent_at = $2 AND image_url = $3",
-        &util::remove_my_deadname(&msg.content),
-        *msg.timestamp,
-        images.get(0)
+        "SELECT id FROM quotes WHERE content = $1",
+        util::remove_my_deadname(&msg.content),
     )
     .fetch_optional(pool)
     .await?;
