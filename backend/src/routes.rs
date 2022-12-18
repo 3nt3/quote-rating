@@ -1,5 +1,7 @@
 use crate::{models, POOL};
 
+use std::collections::HashMap;
+
 use crate::discord;
 use chrono::Utc;
 use rocket::{
@@ -26,6 +28,7 @@ pub async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec
         channel_id: String,
         created_at: chrono::DateTime<Utc>,
         score: Option<i64>, // there is literally no way this would ever be None sqlx is just dumb
+        image_url: Option<String>,
     }
 
     let quote_records;
@@ -53,9 +56,11 @@ pub async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec
             .unwrap_or((&"user not found").to_string()),
     );
 
+    discord::replace_mentions(&client, "".to_string()).await;
+
     let q1 = models::Quote {
         id: r1.id,
-        content: r1.content.clone(),
+        content: discord::replace_mentions(&client, r1.content.clone()).await,
         author_id: u64::from_str_radix(&r1.author_id, 10).unwrap(),
         avatar_url: (r1.avatar_url.clone()),
         username: u1,
@@ -71,10 +76,11 @@ pub async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec
                 Some(GuildId(816943824630710272)),
             )
             .await,
+        image_url: r1.image_url.clone(),
     };
     let q2 = models::Quote {
         id: r2.id,
-        content: r2.content.clone(),
+        content: discord::replace_mentions(&client, r2.content.clone()).await,
         author_id: u64::from_str_radix(&r2.author_id, 10).unwrap(),
         avatar_url: (r2.avatar_url.clone()),
         username: u2,
@@ -90,9 +96,73 @@ pub async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec
                 Some(GuildId(816943824630710272)),
             )
             .await,
+        image_url: r2.image_url.clone(),
     };
 
     Json(vec![q1, q2])
+}
+
+#[derive(Serialize)]
+pub struct Stats {
+    num_quotes: i64,
+    num_votes: i64,
+    num_rated: i64,
+}
+
+#[derive(Debug, PartialEq, FromFormField)]
+pub enum Format {
+    Prometheus,
+    Json,
+}
+
+#[get("/stats?<format>")]
+pub async fn get_stats(format: Option<Format>) -> String {
+    let pool = POOL.get().unwrap();
+
+    let num_quotes = sqlx::query!("SELECT count(id) FROM quotes")
+        .fetch_one(pool)
+        .map_ok(|r| r.count.unwrap())
+        .await
+        .unwrap();
+
+    let num_votes = sqlx::query!("SELECT count(1) FROM votes")
+        .fetch_one(pool)
+        .map_ok(|r| r.count.unwrap())
+        .await
+        .unwrap();
+
+    let num_rated = sqlx::query!(
+        "select count(1) from (select 1 from votes left join quotes q on votes.quote_id = q.id group by quote_id) as _"
+    )
+    .fetch_one(pool)
+    .map_ok(|r| r.count.unwrap())
+    .await
+    .unwrap();
+
+    dbg!(&format);
+
+    match format.unwrap_or(Format::Prometheus) {
+        Format::Prometheus => {
+            return serde_prometheus::to_string(
+                &Stats {
+                    num_quotes,
+                    num_votes,
+                    num_rated,
+                },
+                None,
+                HashMap::new(),
+            )
+            .unwrap();
+        }
+        Format::Json => {
+            return serde_json::to_string(&Stats {
+                num_quotes,
+                num_votes,
+                num_rated,
+            })
+            .unwrap();
+        }
+    }
 }
 
 #[get("/all-scores")]
