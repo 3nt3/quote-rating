@@ -16,10 +16,12 @@
 
     interface Options {
         preferUnrated: Boolean;
+        onlyImages: Boolean;
     }
 
     let options: Options = {
-        preferUnrated: true
+        preferUnrated: true,
+        onlyImages: false
     };
 
     onMount(() => {
@@ -44,7 +46,10 @@
     async function fetchQuotes() {
         quotesLoading = true;
         try {
-            const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}`);
+            const res = await fetch(
+                API_URL +
+                    `/quote?prefer_unrated=${options.preferUnrated}&only_images=${options.onlyImages}`
+            );
             quotes = await res.json();
             quotesError = false;
         } catch {
@@ -59,8 +64,12 @@
         fetchProgress();
     }
 
-    function onDropdownChange(newValue: string) {
+    function preferUnratedChanged(newValue: string) {
         options.preferUnrated = newValue === 'yes';
+    }
+
+    function onlyImagesChanged(newValue: string) {
+        options.onlyImages = newValue === 'yes';
     }
 </script>
 
@@ -117,7 +126,13 @@
                         active={options.preferUnrated ? 'yes' : 'no'}
                         options={{ yes: 'Yes', no: 'No' }}
                         title={'Prefer unrated?'}
-                        onChange={onDropdownChange}
+                        onChange={preferUnratedChanged}
+                    />
+                    <Dropdown
+                        active={options.onlyImages ? 'yes' : 'no'}
+                        options={{ yes: 'Yes', no: 'No' }}
+                        title={'Only images?'}
+                        onChange={onlyImagesChanged}
                     />
                     <button
                         class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"
@@ -134,7 +149,7 @@
                 </div>
                 <div class="flex justify-center">
                     <button
-                        class="rounded-full p-2 ring-1 ring-slate-500 hover:ring-2 transition-shadow ease-in-out duration-300 "
+                        class="rounded-full p-2 ring-1 ring-slate-500 hover:ring-2 transition-shadow ease-in-out duration-300"
                         on:click={fetchQuotes}
                         title="Get new quotes"
                     >

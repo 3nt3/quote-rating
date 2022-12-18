@@ -34,12 +34,17 @@
             />
         </div>
         <!-- content -->
-        <div class="">
-            <SvelteMarkdown
-                source={quoteContent}
-                renderers={{ blockquote: BlockQuoteRenderer, listitem: ListItemRenderer }}
+        {#if quote.image_url}
+            <img
+                class="rounded-md"
+                src={quote.image_url}
+                alt="user generated image that doesn't have an alt text"
             />
-        </div>
+        {/if}
+        <SvelteMarkdown
+            source={quoteContent}
+            renderers={{ blockquote: BlockQuoteRenderer, listitem: ListItemRenderer }}
+        />
         <!-- actions -->
         <div class="flex justify-center gap-4 mt-auto px-2 items-center">
             <button
