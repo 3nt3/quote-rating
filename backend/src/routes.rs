@@ -148,7 +148,7 @@ pub async fn get_stats(format: Option<Format>) -> String {
         .unwrap();
 
     let num_rated = sqlx::query!(
-        "select count(1) from (select 1 from votes left join quotes q on votes.quote_id = q.id group by quote_id) as _"
+        "select count(1) from (select 1 from votes inner join quotes q on votes.quote_id = q.id group by quote_id) as _"
     )
     .fetch_one(pool)
     .map_ok(|r| r.count.unwrap())
