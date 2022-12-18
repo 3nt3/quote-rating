@@ -84,6 +84,7 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<models::Quote>> {
             message_link: (&message_links.get(i).unwrap_or(&"".to_string()))
                 .to_string()
                 .to_string(),
+            image_url: r.image_url.clone(),
         })
         .collect::<Vec<models::Quote>>();
 
@@ -182,6 +183,7 @@ async fn vote(client: &State<Client>, id: i32, vote: i32) -> Json<models::Quote>
                     Some(GuildId(816943824630710272)),
                 )
                 .await,
+            image_url: r.image_url.clone(),
         })
     })
     .await
@@ -268,7 +270,7 @@ async fn main() -> anyhow::Result<()> {
                 routes::get_all_scores,
                 vote,
                 get_leaderboard,
-                get_stats,
+                routes::get_stats,
                 funniest_people
             ],
         )
@@ -292,55 +294,6 @@ enum Format {
     Json,
 }
 
-#[get("/stats?<format>")]
-async fn get_stats(format: Option<Format>) -> String {
-    let pool = POOL.get().unwrap();
-
-    let num_quotes = sqlx::query!("SELECT count(id) FROM quotes")
-        .fetch_one(pool)
-        .map_ok(|r| r.count.unwrap())
-        .await
-        .unwrap();
-
-    let num_votes = sqlx::query!("SELECT count(1) FROM votes")
-        .fetch_one(pool)
-        .map_ok(|r| r.count.unwrap())
-        .await
-        .unwrap();
-
-    let num_rated = sqlx::query!(
-        "select count(1) from (select 1 from votes left join quotes q on votes.quote_id = q.id group by quote_id) as _"
-    )
-    .fetch_one(pool)
-    .map_ok(|r| r.count.unwrap())
-    .await
-    .unwrap();
-
-    dbg!(&format);
-
-    match format.unwrap_or(Format::Prometheus) {
-        Format::Prometheus => {
-            return serde_prometheus::to_string(
-                &Stats {
-                    num_quotes,
-                    num_votes,
-                    num_rated,
-                },
-                None,
-                HashMap::new(),
-            )
-            .unwrap();
-        }
-        Format::Json => {
-            return serde_json::to_string(&Stats {
-                num_quotes,
-                num_votes,
-                num_rated,
-            })
-            .unwrap();
-        }
-    }
-}
 
 #[derive(Deserialize)]
 struct Config {

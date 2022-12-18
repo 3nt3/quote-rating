@@ -17,4 +17,5 @@ pub struct Quote {
     pub channel_id: u64,
     pub message_id: u64,
     pub message_link: String,
+    pub image_url: Option<String>
 }
