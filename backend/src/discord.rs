@@ -66,13 +66,13 @@ pub async fn get_username(client: &Client, user_id: u64) -> Option<String> {
 }
 
 pub async fn replace_mentions(client: &Client, content: String) -> String {
-    let re = Regex::new("<@!*&*([0-9]+)>").unwrap();
+    let mention_regex = Regex::new("<@!*&*([0-9]+)>").unwrap();
 
-    if re.find(&content).is_none() {
+    if mention_regex.find(&content).is_none() {
         return content;
     }
 
-    let captures_iter = re.captures_iter(&content);
+    let captures_iter = mention_regex.captures_iter(&content);
     let mut usernames: HashMap<String, Option<String>> = HashMap::new();
 
     let mut username_futures = vec![];
@@ -104,7 +104,7 @@ pub async fn replace_mentions(client: &Client, content: String) -> String {
         usernames.insert(user_id.unwrap().to_string(), username.clone());
     }
 
-    re.replace_all(&content, |caps: &Captures| {
+    mention_regex.replace_all(&content, |caps: &Captures| {
         let maybe_user_id = caps.get(1);
         match maybe_user_id {
             Some(user_id_match) => {
