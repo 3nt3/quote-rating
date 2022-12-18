@@ -14,8 +14,12 @@ use serenity::{
     Client,
 };
 
-#[get("/quote?<prefer_unrated>")]
-pub async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec<models::Quote>> {
+#[get("/quote?<prefer_unrated>&<only_images>")]
+pub async fn get_quote(
+    client: &State<Client>,
+    prefer_unrated: bool,
+    only_images: bool,
+) -> Json<Vec<models::Quote>> {
     let pool = POOL.get().unwrap();
 
     struct QuoteButNotReally {
@@ -31,19 +35,31 @@ pub async fn get_quote(client: &State<Client>, prefer_unrated: bool) -> Json<Vec
         image_url: Option<String>,
     }
 
-    let quote_records;
-    if prefer_unrated {
-        quote_records = sqlx::query_as!(QuoteButNotReally, r#"select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
+    let quote_records = 
+    (match (only_images, prefer_unrated) {
+        (true, true) => sqlx::query_as!(QuoteButNotReally, r#"
+            select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
+            from quotes
+                     left join votes v on quotes.id = v.quote_id
+            where quotes.image_url is not null
+            group by quotes.id
+            order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc
+            limit 2
+        "#).fetch_all(pool).await.unwrap(),
+    (true, false) => 
+        sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id where quotes.image_url is not null GROUP BY quotes.id ORDER BY random()  LIMIT 2")
+        .fetch_all(pool).await.unwrap(),
+            (false, true) => sqlx::query_as!(QuoteButNotReally, r#"select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
                                         from quotes
                                                  left join votes v on quotes.id = v.quote_id
                                         group by quotes.id
                                         order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc
                                         limit 2
-                                        "#).fetch_all(pool).await.unwrap();
-    } else {
-        quote_records = sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
-        .fetch_all(pool).await.unwrap();
-    }
+                                        "#).fetch_all(pool).await.unwrap(),
+            (false, false) => 
+        sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
+        .fetch_all(pool).await.unwrap(),
+    });
 
     // I kind of hate how this is structured
     let (r1, r2) = (&quote_records[0], &quote_records[1]);
