@@ -16,12 +16,10 @@
 
     interface Options {
         preferUnrated: Boolean;
-        onlyImages: Boolean;
     }
 
     let options: Options = {
-        preferUnrated: true,
-        onlyImages: false
+        preferUnrated: true
     };
 
     onMount(() => {
@@ -48,7 +46,7 @@
         try {
             const res = await fetch(
                 API_URL +
-                    `/quote?prefer_unrated=${options.preferUnrated}&only_images=${options.onlyImages}`
+                    `/quote?prefer_unrated=${options.preferUnrated}`
             );
             quotes = await res.json();
             quotesError = false;
@@ -66,10 +64,6 @@
 
     function preferUnratedChanged(newValue: string) {
         options.preferUnrated = newValue === 'yes';
-    }
-
-    function onlyImagesChanged(newValue: string) {
-        options.onlyImages = newValue === 'yes';
     }
 </script>
 
@@ -127,12 +121,6 @@
                         options={{ yes: 'Yes', no: 'No' }}
                         title={'Prefer unrated?'}
                         onChange={preferUnratedChanged}
-                    />
-                    <Dropdown
-                        active={options.onlyImages ? 'yes' : 'no'}
-                        options={{ yes: 'Yes', no: 'No' }}
-                        title={'Only images?'}
-                        onChange={onlyImagesChanged}
                     />
                     <button
                         class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"

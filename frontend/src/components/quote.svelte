@@ -38,7 +38,7 @@
             <img
                 class="rounded-md"
                 src={quote.image_url}
-                alt="user generated image that doesn't have an alt text"
+                alt="no alt tag"
             />
         {/if}
         <SvelteMarkdown
