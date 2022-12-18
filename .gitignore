@@ -2,5 +2,6 @@ api/target
 discord/target
 venv
 .idea
-.env
+backend/.env
+discord/.env
 node_modules
