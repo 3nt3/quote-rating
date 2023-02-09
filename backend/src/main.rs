@@ -245,7 +245,7 @@ async fn main() -> anyhow::Result<()> {
     // });
 
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(50)
         .connect(&env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
