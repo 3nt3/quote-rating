@@ -134,9 +134,7 @@
           <!-- <Dropdown /> -->
         </div>
         <div class="flex gap-4 sm:flex-row flex-col">
-          {#each quotes as quote}
-            <QuoteComponent {quote} onVote={vote} compact={false} />
-          {/each}
+            <QuoteComponent quote={quotes[0]} onVote={vote} compact={false} />
         </div>
         <div class="flex justify-center">
           <button
