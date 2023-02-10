@@ -252,7 +252,7 @@ async fn main() -> anyhow::Result<()> {
     POOL.set(pool).unwrap();
 
     let allowed_origins =
-        AllowedOrigins::some_exact(&["http://localhost:5173", "https://quotes.3nt3.de"]);
+        AllowedOrigins::some_exact(&["http://localhost:5173", "https://quotess.3nt3.de"]);
     let cors = rocket_cors::CorsOptions {
         allowed_origins,
         allowed_headers: AllowedHeaders::some(&[]),
