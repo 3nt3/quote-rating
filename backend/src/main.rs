@@ -61,15 +61,20 @@ async fn get_leaderboard(client: &State<Client>) -> Json<Vec<models::Quote>> {
         );
         return link.await.clone();
     });
-
     let message_links = futures::future::join_all(message_links_futures).await;
+
+    let content_futures = res
+        .iter()
+        .map(|r| discord::replace_mentions(client, r.content.clone()));
+    let content_results = futures::future::join_all(content_futures).await;
+
 
     let items = res
         .iter()
         .enumerate()
         .map(move |(i, r)| models::Quote {
             id: r.id,
-            content: r.content.clone(),
+            content: content_results.get(i).unwrap_or(&r.content).clone(),
             author_id: u64::from_str_radix(&r.author_id, 10).unwrap(),
             avatar_url: r.avatar_url.clone(),
             username: username_results[i]
