@@ -17,10 +17,12 @@
 
   interface Options {
     preferUnrated: Boolean;
+    preferGood: Boolean;
   }
 
   let options: Options = {
-    preferUnrated: true
+    preferUnrated: true,
+    preferGood: false
   };
 
   onMount(() => {
@@ -47,10 +49,10 @@
     quotes = nextQuotes;
     try {
       if (quotes.length === 0) {
-        const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}`);
+        const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`)
         quotes = await res.json();
       }
-      const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}`);
+      const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`)
       nextQuotes = await res.json();
       quotesError = false;
     } catch {
@@ -60,13 +62,17 @@
   }
 
   async function vote(id: number, vote: number) {
-    const res = await fetch(API_URL + `/vote/${id}/${vote}`, { method: 'POST' });
     fetchQuotes();
+    const res = await fetch(API_URL + `/vote/${id}/${vote}`, { method: 'POST' });
     fetchProgress();
   }
 
   function preferUnratedChanged(newValue: string) {
     options.preferUnrated = newValue === 'yes';
+  }
+
+  function preferGoodChanged(newValue: string) {
+    options.preferGood = newValue === 'yes';
   }
 </script>
 
@@ -119,6 +125,14 @@
               />
             </svg>
           </a>
+          {#if !options.preferUnrated}
+            <Dropdown
+              active={options.preferGood ? 'yes' : 'no'}
+              options={{ yes: 'Yes', no: 'No' }}
+              title={'Prefer good?'}
+              onChange={preferGoodChanged}
+            />
+          {/if}
           <Dropdown
             active={options.preferUnrated ? 'yes' : 'no'}
             options={{ yes: 'Yes', no: 'No' }}
@@ -134,7 +148,7 @@
           <!-- <Dropdown /> -->
         </div>
         <div class="flex gap-4 sm:flex-row flex-col">
-            <QuoteComponent quote={quotes[0]} onVote={vote} compact={false} />
+          <QuoteComponent quote={quotes[0]} onVote={vote} compact={false} />
         </div>
         <div class="flex justify-center">
           <button
