@@ -1,28 +1,36 @@
-use crate::{models, POOL};
+use crate::{
+    models::{self, Quote},
+    POOL, get_config,
+};
 
-use std::collections::HashMap;
+use std::{collections::HashMap, any::{self, Any}};
 
 use crate::discord;
 use chrono::Utc;
 use rocket::{
     futures::TryFutureExt,
+    response::{content, status},
     serde::{json::Json, Serialize},
-    State,
+    State, http::Status,
 };
 use serenity::{
     model::prelude::{ChannelId, GuildId, MessageId, UserId},
     Client,
 };
+use sqlx::query_builder::QueryBuilder;
 
-#[get("/quote?<prefer_unrated>&<only_images>")]
+#[get("/quote?<prefer_unrated>&<only_images>&<only_good>")]
 pub async fn get_quote(
     client: &State<Client>,
     prefer_unrated: bool,
     only_images: bool,
-) -> Json<Vec<models::Quote>> {
+    only_good: bool,
+) -> Result<Json<Quote>, status::Custom<Json<HashMap<&str, String>>>> {
     let pool = POOL.get().unwrap();
 
-    struct QuoteButNotReally {
+    // This is just a typed representation of the raw row from the database
+    #[derive(sqlx::FromRow, Debug)]
+    struct QuoteRecord {
         id: i32,
         content: String,
         author_id: String,
@@ -35,87 +43,91 @@ pub async fn get_quote(
         image_url: Option<String>,
     }
 
-    let quote_records = 
-        (match (only_images, prefer_unrated) {
-            (true, true) => sqlx::query_as!(QuoteButNotReally, r#"
-                select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
-                from quotes
-                         left join votes v on quotes.id = v.quote_id
-                where quotes.image_url is not null
-                group by quotes.id
-                order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc
-                limit 2
-            "#).fetch_all(pool).await.unwrap(),
-            (true, false) => 
-                sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id where quotes.image_url is not null GROUP BY quotes.id ORDER BY random()  LIMIT 2")
-                .fetch_all(pool).await.unwrap(),
-            (false, true) => sqlx::query_as!(QuoteButNotReally, r#"select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score
-                                        from quotes
-                                                 left join votes v on quotes.id = v.quote_id
-                                        group by quotes.id
-                                        order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc
-                                        limit 2
-                                        "#).fetch_all(pool).await.unwrap(),
-            (false, false) => 
-                sqlx::query_as!(QuoteButNotReally, "SELECT quotes.*, coalesce(SUM(v.vote), 0::BIGINT) AS score FROM quotes LEFT JOIN votes v on quotes.id = v.quote_id GROUP BY quotes.id ORDER BY random() LIMIT 2")
-            .fetch_all(pool).await.unwrap(),
-        });
+    let mut query_builder = QueryBuilder::new("select quotes.*, coalesce(sum(v.vote), 0::BIGINT) as score from quotes left join votes v on quotes.id = v.quote_id ");
 
-    // I kind of hate how this is structured
-    let (r1, r2) = (&quote_records[0], &quote_records[1]);
-    let (u1, u2) = (
-        discord::get_username(&client, u64::from_str_radix(&r1.author_id, 10).unwrap())
-            .await
-            .unwrap_or((&"user not found").to_string()),
-        discord::get_username(&client, u64::from_str_radix(&r2.author_id, 10).unwrap())
-            .await
-            .unwrap_or((&"user not found").to_string()),
-    );
+    if only_images {
+        query_builder.push("where quotes.image_url is not null ");
+    }
 
-    discord::replace_mentions(&client, "".to_string()).await;
+    query_builder.push("group by quotes.id ");
 
-    let q1 = models::Quote {
-        id: r1.id,
-        content: discord::replace_mentions(&client, r1.content.clone()).await,
-        author_id: u64::from_str_radix(&r1.author_id, 10).unwrap(),
-        avatar_url: (r1.avatar_url.clone()),
-        username: u1,
-        created_at: r1.created_at,
-        sent_at: r1.sent_at,
-        score: r1.score.unwrap_or(0),
-        channel_id: u64::from_str_radix(&r1.channel_id, 10).unwrap(),
-        message_id: u64::from_str_radix(&r1.message_id, 10).unwrap(),
-        message_link: MessageId(u64::from_str_radix(&r1.message_id, 10).unwrap())
-            .link_ensured(
-                &client.cache_and_http,
-                ChannelId(u64::from_str_radix(&r1.channel_id, 10).unwrap()),
-                Some(GuildId(816943824630710272)),
-            )
-            .await,
-        image_url: r1.image_url.clone(),
+    if only_good && !prefer_unrated {
+        // FIXME: this will run out when all quotes are rated bad
+        // solution: sort it and use the top ones instead of using HAVING to filter the rows
+        query_builder.push("having coalesce(sum(v.vote), 0::BIGINT) > 0 ");
+    }
+
+    if prefer_unrated {
+        query_builder.push("order by (select (count(1) + (random() * 0.01)) from votes where votes.quote_id = id) asc ");
+    } else {
+        query_builder.push("order by random() ");
+    }
+
+    query_builder.push("limit 1");
+
+    let quote_records = query_builder
+        .build_query_as::<QuoteRecord>()
+        .fetch_all(pool)
+        .await;
+
+
+    if let Err(why) = quote_records {
+        let mut response = HashMap::new();
+        response.insert("error", why.to_string());
+        return Err(status::Custom(Status::InternalServerError, Json(response)));
+    }
+    let quote_records = quote_records.unwrap();
+
+    let quote_record = quote_records.get(0);
+    if quote_record.is_none() {
+        let mut response = HashMap::new();
+        response.insert("error", "No quotes found".to_string());
+        return Err(status::Custom(Status::InternalServerError, Json(response)));
+    }
+    let quote_record = quote_record.unwrap();
+
+    let user_id = quote_record.author_id.parse::<u64>();
+    if let Err(why) = user_id {
+        let mut response = HashMap::new();
+        response.insert("error", why.to_string());
+        return Err(status::Custom(Status::InternalServerError, Json(response)));
+    }
+    let user_id = user_id.unwrap();
+
+    let message_id = quote_record.message_id.parse::<u64>();
+    if let Err(why) = message_id {
+        let mut response = HashMap::new();
+        response.insert("error", why.to_string());
+        return Err(status::Custom(Status::InternalServerError, Json(response)));
+    }
+
+    let channel_id = quote_record.channel_id.parse::<u64>();
+    if let Err(why) = channel_id {
+        let mut response = HashMap::new();
+        response.insert("error", why.to_string());
+        return Err(status::Custom(Status::InternalServerError, Json(response)));
+    }
+
+    let config = get_config().unwrap();
+
+    let quote = Quote {
+        id: quote_record.id,
+        content: discord::replace_mentions(client, quote_record.content.clone()).await,
+        author_id: user_id,
+        sent_at: quote_record.sent_at,
+        avatar_url: quote_record.avatar_url.clone(),
+        message_id: message_id.unwrap(),
+        channel_id: channel_id.unwrap(),
+        created_at: quote_record.created_at,
+        score: quote_record.score.unwrap_or(0),
+        image_url: quote_record.image_url.clone(),
+        message_link: MessageId(quote_record.message_id.parse().unwrap())
+            .link(ChannelId(quote_record.channel_id.parse().unwrap()), Some(GuildId(config.guild_id))),
+        username: discord::get_username(client, user_id).await.unwrap_or("Unknown".to_string()),
     };
-    let q2 = models::Quote {
-        id: r2.id,
-        content: discord::replace_mentions(&client, r2.content.clone()).await,
-        author_id: u64::from_str_radix(&r2.author_id, 10).unwrap(),
-        avatar_url: (r2.avatar_url.clone()),
-        username: u2,
-        created_at: r2.created_at,
-        sent_at: r2.sent_at,
-        score: r2.score.unwrap_or(0),
-        channel_id: u64::from_str_radix(&r2.channel_id, 10).unwrap(),
-        message_id: u64::from_str_radix(&r2.message_id, 10).unwrap(),
-        message_link: MessageId(u64::from_str_radix(&r2.message_id, 10).unwrap())
-            .link_ensured(
-                &client.cache_and_http,
-                ChannelId(u64::from_str_radix(&r2.channel_id, 10).unwrap()),
-                Some(GuildId(816943824630710272)),
-            )
-            .await,
-        image_url: r2.image_url.clone(),
-    };
 
-    Json(vec![q1, q2])
+    Ok(Json(quote))
+    // Json(vec![q1, q2])
 }
 
 #[derive(Serialize)]

@@ -303,6 +303,7 @@ enum Format {
 #[derive(Deserialize)]
 struct Config {
     token: String,
+    guild_id: u64,
 }
 
 fn get_config() -> Option<Config> {
