@@ -8,6 +8,7 @@
     export let options: { [key: string]: string };
     export let title: string;
     export let onChange: Function;
+    export let enabled: boolean =true;
 
     onMount(() => {
         const handleOutsideClick = (event: any) => {
@@ -42,10 +43,12 @@
     <div>
         <button
             type="button"
-            class="inline-flex w-full justify-center rounded-md border border-slate-700 bg-slate-800 px-4 py-2  text-xs sm:text-sm font-medium text-slate-300 shadow-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
+            class="inline-flex w-full justify-center rounded-md border border-slate-700 bg-slate-800 px-4 py-2 text-xs sm:text-sm font-medium text-slate-300 shadow-sm enabled:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100 transition-all"
+            class:opacity-50={!enabled}
             id="menu-button"
             aria-expanded="true"
             aria-haspopup="true"
+            disabled={!enabled}
             on:click={() => (show = !show)}
         >
             {title}: {options[active]}

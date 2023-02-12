@@ -77,6 +77,7 @@
 
   function preferUnratedChanged(newValue: string) {
     options.preferUnrated = newValue === 'yes';
+    options.preferGood = newValue === 'yes' ? false : options.preferGood;
   }
 
   function preferGoodChanged(newValue: string) {
@@ -161,14 +162,13 @@
               />
             </svg>
           </a>
-          {#if !options.preferUnrated}
-            <Dropdown
-              active={options.preferGood ? 'yes' : 'no'}
-              options={{ yes: 'Yes', no: 'No' }}
-              title={'Only good?'}
-              onChange={preferGoodChanged}
-            />
-          {/if}
+          <Dropdown
+            active={options.preferGood ? 'yes' : 'no'}
+            options={{ yes: 'Yes', no: 'No' }}
+            title={'Only good?'}
+            onChange={preferGoodChanged}
+            enabled={!options.preferUnrated}
+          />
           <Dropdown
             active={options.preferUnrated ? 'yes' : 'no'}
             options={{ yes: 'Yes', no: 'No' }}
