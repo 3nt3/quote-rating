@@ -45,14 +45,23 @@
   }
 
   async function fetchQuotes() {
+    console.log(quotes, nextQuotes);
     quotesLoading = true;
     quotes = nextQuotes;
+    nextQuotes = [];
+    console.log(quotes, nextQuotes);
     try {
       if (quotes.length === 0) {
-        const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`)
+        const res = await fetch(
+          API_URL +
+            `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`
+        );
         quotes = await res.json();
+        quotesLoading = false;
       }
-      const res = await fetch(API_URL + `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`)
+      const res = await fetch(
+        API_URL + `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`
+      );
       nextQuotes = await res.json();
       quotesError = false;
     } catch {
@@ -101,7 +110,7 @@
   <div
     class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 min-h-screen"
   >
-    {#if quotesLoading && quotes.length === 0}
+    {#if quotesLoading || quotes.length === 0}
       Loading
     {:else if !quotesError}
       <div class="w-[min(800px,90%)] flex flex-col gap-4">

@@ -82,7 +82,7 @@ pub async fn get_quote(
     if quote_record.is_none() {
         let mut response = HashMap::new();
         response.insert("error", "No quotes found".to_string());
-        return Err(status::Custom(Status::InternalServerError, Json(response)));
+        return Err(status::Custom(Status::NotFound, Json(response)));
     }
     let quote_record = quote_record.unwrap();
 
