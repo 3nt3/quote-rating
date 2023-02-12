@@ -5,6 +5,7 @@
   import QuoteComponent from '../../components/quote.svelte';
   import type { Quote } from '../../models';
   import Dropdown from '../../components/dropdown.svelte';
+  import Tooltip from '../../components/tooltip.svelte';
 
   let progress = 100;
   let progressLoading = true;
@@ -162,19 +163,24 @@
               />
             </svg>
           </a>
-          <Dropdown
-            active={options.preferGood ? 'yes' : 'no'}
-            options={{ yes: 'Yes', no: 'No' }}
-            title={'Only good?'}
-            onChange={preferGoodChanged}
-            enabled={!options.preferUnrated}
-          />
-          <Dropdown
-            active={options.preferUnrated ? 'yes' : 'no'}
-            options={{ yes: 'Yes', no: 'No' }}
-            title={'Prefer unrated?'}
-            onChange={preferUnratedChanged}
-          />
+          <Tooltip title="score > 0">
+            <Dropdown
+              active={options.preferGood ? 'yes' : 'no'}
+              options={{ yes: 'Yes', no: 'No' }}
+              title={'Only good?'}
+              onChange={preferGoodChanged}
+              enabled={!options.preferUnrated}
+            />
+          </Tooltip>
+          <Tooltip title="n votes = 0">
+            <Dropdown
+              active={options.preferUnrated ? 'yes' : 'no'}
+              options={{ yes: 'Yes', no: 'No' }}
+              title={'Prefer unrated?'}
+              onChange={preferUnratedChanged}
+            />
+          </Tooltip>
+
           <button
             class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"
             on:click={() => {
