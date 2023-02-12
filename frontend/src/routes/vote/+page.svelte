@@ -48,12 +48,11 @@
     quoteLoading = true;
     quote = nextQuote === null ? null : Object.assign({}, nextQuote);
     nextQuote = null;
-    console.log("quote, nextQuote:", quote, nextQuote);
+    console.log('quote, nextQuote:', quote, nextQuote);
     try {
       if (!quote) {
         const res = await fetch(
-          API_URL +
-            `/quote?prefer_unrated=${options.preferUnrated}&only_good=${options.preferGood}`
+          API_URL + `/quote?prefer_unrated=${options.preferUnrated}&only_good=${options.preferGood}`
         );
         quote = await res.json();
       }
@@ -67,7 +66,7 @@
       console.log(e);
     }
     quoteLoading = false;
-    console.log("quote, nextQuote:", quote, nextQuote);
+    console.log('quote, nextQuote:', quote, nextQuote);
   }
 
   async function vote(id: number, vote: number) {
@@ -83,9 +82,28 @@
   function preferGoodChanged(newValue: string) {
     options.preferGood = newValue === 'yes';
   }
+
+  function handleKeydown(event: KeyboardEvent) {
+    console.log(event.key);
+    if (quote === null) {
+      return;
+    }
+    switch (event.key) {
+      case 'ArrowLeft':
+        vote(quote.id, -1);
+        break;
+      case 'ArrowRight':
+        vote(quote.id, 1);
+        break;
+      case ' ':
+        fetchQuote();
+        break;
+    }
+  }
 </script>
 
-<main class="bg-slate-900 min-h-screen overflow-hidden">
+<svelte:window on:keydown={handleKeydown} />
+<main class="bg-slate-900 min-h-screen overflow-hidden flex flex-col">
   <div
     class="flex items-center flex-col gap-1 ease-in-out transition-color transition-opacity duration-300 w-screen"
   >
@@ -108,10 +126,20 @@
     </p>
   </div>
   <div
-    class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 min-h-screen"
+    class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 flex-1"
   >
     {#if quoteLoading && !quote}
-      Loading
+      <p>
+        {#if Math.random() < 0.2}
+          protip: use the arrow keys to vote
+        {:else if Math.random() < 0.4}
+          protip: use the spacebar to skip
+        {:else if Math.random() < 0.6}
+          protip: use the dropdowns to filter
+        {:else}
+          Loading
+        {/if}
+      </p>
     {:else if !quoteError}
       <div class="w-[min(800px,90%)] flex flex-col gap-4">
         <div class="flex justify-end gap-2 items-center">
@@ -138,7 +166,7 @@
             <Dropdown
               active={options.preferGood ? 'yes' : 'no'}
               options={{ yes: 'Yes', no: 'No' }}
-              title={'Prefer good?'}
+              title={'Only good?'}
               onChange={preferGoodChanged}
             />
           {/if}
@@ -159,7 +187,9 @@
           <!-- <Dropdown /> -->
         </div>
         <div class="flex gap-4 sm:flex-row flex-col">
-          <QuoteComponent {quote} onVote={vote} compact={false} />
+          {#if quote}
+            <QuoteComponent {quote} onVote={vote} compact={false} />
+          {/if}
         </div>
         <div class="flex justify-center">
           <button
