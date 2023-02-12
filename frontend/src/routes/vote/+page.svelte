@@ -10,10 +10,10 @@
   let progressLoading = true;
   let progressError = false;
 
-  let quotes: Quote[] = [];
-  let nextQuotes: Quote[] = [];
-  let quotesLoading = true;
-  let quotesError = false;
+  let quote: Quote | null = null;
+  let quoteLoading = true;
+  let quoteError = false;
+  let nextQuote: Quote | null = null;
 
   interface Options {
     preferUnrated: Boolean;
@@ -27,7 +27,7 @@
 
   onMount(() => {
     fetchProgress();
-    fetchQuotes();
+    fetchQuote();
   });
 
   async function fetchProgress() {
@@ -44,34 +44,34 @@
     progressLoading = false;
   }
 
-  async function fetchQuotes() {
-    console.log(quotes, nextQuotes);
-    quotesLoading = true;
-    quotes = nextQuotes;
-    nextQuotes = [];
-    console.log(quotes, nextQuotes);
+  async function fetchQuote() {
+    quoteLoading = true;
+    quote = nextQuote === null ? null : Object.assign({}, nextQuote);
+    nextQuote = null;
+    console.log("quote, nextQuote:", quote, nextQuote);
     try {
-      if (quotes.length === 0) {
+      if (!quote) {
         const res = await fetch(
           API_URL +
-            `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`
+            `/quote?prefer_unrated=${options.preferUnrated}&only_good=${options.preferGood}`
         );
-        quotes = await res.json();
-        quotesLoading = false;
+        quote = await res.json();
       }
       const res = await fetch(
-        API_URL + `/quote?prefer_unrated=${options.preferUnrated}&prefer_good=${options.preferGood}`
+        API_URL + `/quote?prefer_unrated=${options.preferUnrated}&only_good=${options.preferGood}`
       );
-      nextQuotes = await res.json();
-      quotesError = false;
-    } catch {
-      quotesError = true;
+      nextQuote = await res.json();
+      quoteError = false;
+    } catch (e) {
+      quoteError = true;
+      console.log(e);
     }
-    quotesLoading = false;
+    quoteLoading = false;
+    console.log("quote, nextQuote:", quote, nextQuote);
   }
 
   async function vote(id: number, vote: number) {
-    fetchQuotes();
+    fetchQuote();
     const res = await fetch(API_URL + `/vote/${id}/${vote}`, { method: 'POST' });
     fetchProgress();
   }
@@ -110,9 +110,9 @@
   <div
     class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 min-h-screen"
   >
-    {#if quotesLoading || quotes.length === 0}
+    {#if quoteLoading && !quote}
       Loading
-    {:else if !quotesError}
+    {:else if !quoteError}
       <div class="w-[min(800px,90%)] flex flex-col gap-4">
         <div class="flex justify-end gap-2 items-center">
           <a
@@ -151,18 +151,20 @@
           <button
             class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"
             on:click={() => {
-              fetchQuotes();
+              quote = null;
+              nextQuote = null;
+              fetchQuote();
             }}>Apply</button
           >
           <!-- <Dropdown /> -->
         </div>
         <div class="flex gap-4 sm:flex-row flex-col">
-          <QuoteComponent quote={quotes[0]} onVote={vote} compact={false} />
+          <QuoteComponent {quote} onVote={vote} compact={false} />
         </div>
         <div class="flex justify-center">
           <button
             class="rounded-full p-2 ring-1 ring-slate-500 hover:ring-2 transition-shadow ease-in-out duration-300"
-            on:click={fetchQuotes}
+            on:click={fetchQuote}
             title="Get new quotes"
           >
             <svg
