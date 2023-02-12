@@ -132,9 +132,9 @@
       <p>
         {#if Math.random() < 0.2}
           protip: use the arrow keys to vote
-        {:else if Math.random() < 0.4}
+        {:else if Math.random() < 0.2}
           protip: use the spacebar to skip
-        {:else if Math.random() < 0.6}
+        {:else if Math.random() < 0.2}
           protip: use the dropdowns to filter
         {:else}
           Loading
