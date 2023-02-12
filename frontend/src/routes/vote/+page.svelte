@@ -84,7 +84,6 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    console.log(event.key);
     if (quote === null) {
       return;
     }
@@ -140,7 +139,7 @@
           Loading
         {/if}
       </p>
-    {:else if !quoteError}
+    {:else if !quoteError && quote}
       <div class="w-[min(800px,90%)] flex flex-col gap-4">
         <div class="flex justify-end gap-2 items-center">
           <a
@@ -187,9 +186,7 @@
           <!-- <Dropdown /> -->
         </div>
         <div class="flex gap-4 sm:flex-row flex-col">
-          {#if quote}
-            <QuoteComponent {quote} onVote={vote} compact={false} />
-          {/if}
+          <QuoteComponent {quote} onVote={vote} compact={false} />
         </div>
         <div class="flex justify-center">
           <button
