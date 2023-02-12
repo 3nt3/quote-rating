@@ -163,7 +163,6 @@
               />
             </svg>
           </a>
-          <Tooltip title="score > 0">
             <Dropdown
               active={options.preferGood ? 'yes' : 'no'}
               options={{ yes: 'Yes', no: 'No' }}
@@ -171,15 +170,12 @@
               onChange={preferGoodChanged}
               enabled={!options.preferUnrated}
             />
-          </Tooltip>
-          <Tooltip title="n votes = 0">
             <Dropdown
               active={options.preferUnrated ? 'yes' : 'no'}
               options={{ yes: 'Yes', no: 'No' }}
               title={'Prefer unrated?'}
               onChange={preferUnratedChanged}
             />
-          </Tooltip>
 
           <button
             class="px-4 rounded-md transition-all text-sm bg-indigo-500 hover:bg-indigo-600 self-stretch"
