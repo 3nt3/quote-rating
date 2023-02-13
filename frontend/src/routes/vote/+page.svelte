@@ -5,7 +5,7 @@
   import QuoteComponent from '../../components/quote.svelte';
   import type { Quote } from '../../models';
   import Dropdown from '../../components/dropdown.svelte';
-  import Tooltip from '../../components/tooltip.svelte';
+  import Spinner from '../../components/spinner.svelte';
 
   let progress = 100;
   let progressLoading = true;
@@ -23,12 +23,17 @@
 
   let options: Options = {
     preferUnrated: true,
-    preferGood: false
+    preferGood: true
   };
 
   onMount(() => {
-    fetchProgress();
     fetchQuote();
+    fetchProgress().then(() => {
+      if (progress >= 100) {
+        options.preferUnrated = false;
+        options.preferGood = true;
+      }
+    });
   });
 
   async function fetchProgress() {
@@ -43,7 +48,7 @@
     }
 
     if (progress >= 100) {
-        options.preferUnrated = false;
+      options.preferUnrated = false;
     }
 
     progressLoading = false;
@@ -105,6 +110,12 @@
         break;
     }
   }
+
+  const tips = [
+    'protip: use the arrow keys to vote',
+    'protip: use the spacebar to skip',
+    'protip: use the dropdowns to filter',
+  ];
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -124,7 +135,7 @@
       class:opacity-100={!progressLoading}
     >
       {#if !progressError}
-        {progress.toFixed(2)}% rated
+        {progress.toFixed(2)}% rated {#if progress >= 100}🎉{/if}
       {:else}
         error talking to server 😥
       {/if}
@@ -133,18 +144,13 @@
   <div
     class="text-slate-200 flex col sm:row justify-center w-full h-full items-center px-4 overflow-hidden mt-8 md:mt-0 flex-1"
   >
-    {#if quoteLoading && !quote}
-      <p>
-        {#if Math.random() < 0.2}
-          protip: use the arrow keys to vote
-        {:else if Math.random() < 0.2}
-          protip: use the spacebar to skip
-        {:else if Math.random() < 0.2}
-          protip: use the dropdowns to filter
-        {:else}
-          Loading
-        {/if}
-      </p>
+    {#if (quoteLoading && !quote)}
+      <div class="flex flex-col justify-center items-center gap-2 text-slate-300">
+        <Spinner />
+        <p class="text-sm w-72 text-center">
+          {tips[Math.floor(Math.random() * tips.length)]}
+        </p>
+      </div>
     {:else if !quoteError && quote}
       <div class="w-[min(800px,90%)] flex flex-col gap-4">
         <div class="flex justify-end gap-2 items-center">

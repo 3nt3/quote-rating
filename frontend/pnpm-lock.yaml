@@ -8,6 +8,7 @@ specifiers:
   '@typescript-eslint/parser': ^5.46.1
   autoprefixer: ^10.4.13
   chart.js: ^4.0.1
+  dayjs: ^1.11.7
   eslint: ^8.29.0
   eslint-config-prettier: ^8.5.0
   eslint-plugin-svelte3: ^4.0.0
@@ -29,6 +30,7 @@ specifiers:
 dependencies:
   '@sveltejs/adapter-node': 1.0.0_l5ueyfihz3gpzzvvyo2ean5u3e
   chart.js: 4.0.1
+  dayjs: 1.11.7
   node-sass: 8.0.0
   sass: 1.56.2
   svelte-chartjs: 3.1.0_nrk7xdig266baup5htiuilj5fa
@@ -1034,6 +1036,10 @@ packages:
     engines: {node: '>=4'}
     hasBin: true
     dev: true
+
+  /dayjs/1.11.7:
+    resolution: {integrity: sha512-+Yw9U6YO5TQohxLcIkrXBeY73WP3ejHWVvx8XCk3gxvQDCTEmS48ZrSZCKciI7Bhl/uCMyxYtE9UqRILmFphkQ==}
+    dev: false
 
   /debug/4.3.4:
     resolution: {integrity: sha512-PRWFHuSU3eDtQJPvnNY7Jcket1j0t5OuOsFzPPzsekD52Zl8qUfFIPEiswXqIvHWGVHOgX+7G/vCNNhehwxfkQ==}

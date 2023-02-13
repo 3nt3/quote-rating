@@ -5,6 +5,13 @@
   import ListItemRenderer from './list_item_renderer.svelte';
   import ThreeDotsDropdown from './three_dots_dropdown.svelte';
   import CompactBlockQuoteRenderer from './compact_block_quote_renderer.svelte';
+  import * as dayjs from 'dayjs';
+  import * as localizedFormat from 'dayjs/plugin/localizedFormat'
+  import * as relativeTime from 'dayjs/plugin/relativeTime'
+  import 'dayjs/locale/de';
+
+  dayjs.extend(localizedFormat)
+  dayjs.extend(relativeTime)
 
   export let quote: Quote;
   export let onVote: Function;
@@ -14,16 +21,20 @@
     .replace('\n', '\n')
     .replace(/^(-|--|–)/, '—')
     .replace('\n—', '\n\n—');
+
 </script>
 
 {#if !compact}
   <div
-    class="bg-slate-800 rounded-xl p-6 flex-1 sm:w-80 flex flex-col gap-4 shadow-lg border-2 border-slate-700"
+    class="bg-slate-800 rounded-xl p-6 flex-1 sm:w-80 flex flex-col gap-4 shadow-lg border-2 border-slate-700 text-slate-300"
   >
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-4">
         <img class="rounded-full h-8" src={quote.avatar_url} alt={`${quote.username}'s avatar`} />
-        <h1 class="">{quote.username}</h1>
+        <div class="flex flex-col">
+            <h1 class="text-slate-300 my-0">{quote.username}</h1>
+            <p class="text-slate-400 text-xs">{dayjs(quote.created_at).locale('de').format('L, LT:s')} ({dayjs(quote.created_at).fromNow()})</p>
+        </div>
       </div>
       <ThreeDotsDropdown links={[{ href: quote.message_link, label: 'View message in discord' }]} />
     </div>
