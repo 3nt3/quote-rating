@@ -27,12 +27,12 @@
   };
 
   onMount(() => {
-    fetchQuote();
     fetchProgress().then(() => {
       if (progress >= 100) {
         options.preferUnrated = false;
         options.preferGood = true;
       }
+      fetchQuote();
     });
   });
 
