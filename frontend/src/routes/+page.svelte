@@ -46,9 +46,9 @@
             {/if}
         </p>
     </div>
-    <div class="flex justify-center items-center flex-col text-center text-slate-200 h-screen mt-5">
+    <div class="flex justify-center items-center flex-col text-center text-slate-300 h-screen mt-5 gap-2">
         <h1 class="text-4xl font-bold">quotess.3nt3.de</h1>
-        <p class="text-xl">"because there's just too many of them"</p>
+        <p class="font-serif italic text-xl">"because there's just too many of them"</p>
         <p class="text-sm">Now with ✨privacy✨</p>
         <div
             class="flex flex-col sm:flex-row gap-3 items-center w-full px-3 justify-center mt-3 font-bold"
