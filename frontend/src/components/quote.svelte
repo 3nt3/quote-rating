@@ -33,8 +33,8 @@
         <div class="flex flex-col">
           <h1 class="text-slate-300 my-0">{quote.username}</h1>
           <p class="text-slate-400 text-xs">
-            {dayjs(quote.created_at).locale('de').format('L, LT:s')} ({dayjs(
-              quote.created_at
+            {dayjs(quote.sent_at).locale('de').format('L, LT:s')} ({dayjs(
+              quote.sent_at
             ).fromNow()})
           </p>
         </div>
